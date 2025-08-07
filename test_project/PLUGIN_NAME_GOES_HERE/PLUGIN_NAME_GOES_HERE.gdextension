@@ -1,6 +1,6 @@
 [configuration]
 
-entry_symbol = "PLUGIN_NAME_GOES_HERE_init"
+entry_symbol = "plugin_name_goes_here_init"
 compatibility_minimum = "4.4"
 
 [libraries]
@@ -15,15 +15,15 @@ ios.arm64.double.debug = "./bin/ios/libplugin_name_goes_here.ios.template_debug.
 ios.arm64.single.release = "./bin/ios/libplugin_name_goes_here.ios.template_release.arm64.dylib"
 ios.arm64.double.release = "./bin/ios/libplugin_name_goes_here.ios.template_release.arm64.double.dylib"
 
-windows.x86_32.single.debug = "./bin/windows/PLUGIN_NAME_GOES_HERE.windows.template_debug.x86_32.dll"
-windows.x86_32.double.debug = "./bin/windows/PLUGIN_NAME_GOES_HERE.windows.template_debug.x86_32.double.dll"
-windows.x86_32.single.release = "./bin/windows/PLUGIN_NAME_GOES_HERE.windows.template_release.x86_32.dll"
-windows.x86_32.double.release = "./bin/windows/PLUGIN_NAME_GOES_HERE.windows.template_release.x86_32.double.dll"
+windows.x86_32.single.debug = "./bin/windows/plugin_name_goes_here.windows.template_debug.x86_32.dll"
+windows.x86_32.double.debug = "./bin/windows/plugin_name_goes_here.windows.template_debug.x86_32.double.dll"
+windows.x86_32.single.release = "./bin/windows/plugin_name_goes_here.windows.template_release.x86_32.dll"
+windows.x86_32.double.release = "./bin/windows/plugin_name_goes_here.windows.template_release.x86_32.double.dll"
 
-windows.x86_64.single.debug = "./bin/windows/PLUGIN_NAME_GOES_HERE.windows.template_debug.x86_64.dll"
-windows.x86_64.double.debug = "./bin/windows/PLUGIN_NAME_GOES_HERE.windows.template_debug.x86_64.double.dll"
-windows.x86_64.single.release = "./bin/windows/PLUGIN_NAME_GOES_HERE.windows.template_release.x86_64.dll"
-windows.x86_64.double.release = "./bin/windows/PLUGIN_NAME_GOES_HERE.windows.template_release.x86_64.double.dll"
+windows.x86_64.single.debug = "./bin/windows/plugin_name_goes_here.windows.template_debug.x86_64.dll"
+windows.x86_64.double.debug = "./bin/windows/plugin_name_goes_here.windows.template_debug.x86_64.double.dll"
+windows.x86_64.single.release = "./bin/windows/plugin_name_goes_here.windows.template_release.x86_64.dll"
+windows.x86_64.double.release = "./bin/windows/plugin_name_goes_here.windows.template_release.x86_64.double.dll"
 
 linux.x86_64.single.debug = "./bin/linux/libplugin_name_goes_here.linux.template_debug.x86_64.so"
 linux.x86_64.double.debug = "./bin/linux/libplugin_name_goes_here.linux.template_debug.x86_64.double.so"

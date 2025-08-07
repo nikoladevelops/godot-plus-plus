@@ -35,7 +35,10 @@ def display_menu():
     
     print(f"Current Plugin Name: {first_line}")
     print(f"Current Targeted Godot Version: {second_line}")
-    print("\n")
+
+    print("Warning: When Using This GDExtension Setup Tool, Please Make Sure Godot Is Closed And You Are Not Playing The Test Project")
+    print("Warning: Your Plugin Name Will Always Be Lowercase When Used As File Name Or Directory Name. This Is The Correct Convention In Godot")
+    print("Note: If you receive any errors when running the test project, please recompile the code (with Godot closed) and run the test project again")
     print("Choose an option")
 
     print("1. Change Godot Target Version")
@@ -60,7 +63,7 @@ def handle_option(choice):
             if plugin_name:
                 # Call renaming.py with the plugin name
                 renaming_path = os.path.join(script_dir, "tools", "renaming.py")
-                result = subprocess.run([sys.executable, renaming_path, plugin_name], capture_output=True, text=True)
+                result = subprocess.run([sys.executable, renaming_path, plugin_name])
                 if result.returncode != 0:
                     print(result.stderr)
                     input("Press Enter to continue...")
@@ -81,6 +84,7 @@ def handle_option(choice):
         # TODO
         print("NOT IMPLEMENTED YET")
         input("Press Enter to return...")
+        
 
 def main():
     """Main loop to display menu and handle user input."""

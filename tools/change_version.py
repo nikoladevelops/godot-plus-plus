@@ -12,8 +12,8 @@ DONT_TOUCH_PATH = os.path.join(PARENT_DIR, "dont_touch.txt")
 
 def run_git_command(args, cwd=None):
     """Run a Git command and return (success, output)."""
-    result = subprocess.run([
-        "git"] + args,
+    result = subprocess.run(
+        ["git"] + args,
         cwd=cwd,
         text=True,
         capture_output=True
@@ -21,7 +21,7 @@ def run_git_command(args, cwd=None):
     return result.returncode == 0, result.stdout.strip() or result.stderr.strip()
 
 def fetch_remote_branches():
-    """Fetch and return all supported remote branches from godot-cpp."""
+    """Fetch and return all supported remote branches from godot-cpp, sorted descending with master last."""
     success, _ = run_git_command(["fetch", "--all"], cwd=SUBMODULE_PATH)
     if not success:
         print("Failed to fetch remote branches.")
@@ -33,36 +33,45 @@ def fetch_remote_branches():
         sys.exit(1)
 
     raw_branches = [line.strip() for line in output.splitlines() if "->" not in line]
-    cleaned = sorted(set(b.replace("origin/", "") for b in raw_branches))
+    cleaned = set(b.replace("origin/", "") for b in raw_branches)
 
-    versioned = sorted([b for b in cleaned if is_supported_version(b)], key=version_sort_key)
-    if "master" in cleaned and "master" not in versioned:
-        versioned.append("master")
+    numeric_versions = sorted(
+        (b for b in cleaned if is_supported_numeric_version(b)),
+        key=parse_version_tuple,
+        reverse=True  # descending order
+    )
 
-    return versioned
+    branches = numeric_versions
+    if "master" in cleaned:
+        branches.append("master")
 
-def version_sort_key(version):
-    try:
-        return tuple(map(int, version.split(".")))
-    except:
-        return (999, 999)
+    return branches
 
-def is_supported_version(branch):
-    """Return True if branch is 4.0+ or master."""
-    if branch == "master":
-        return True
+def is_supported_numeric_version(branch):
+    """Check if branch is a supported numeric version (4.0 or above)."""
     try:
         major, minor = map(int, branch.split("."))
         return major >= 4
-    except Exception:
+    except ValueError:
         return False
+
+def is_supported_version(branch):
+    """Return True if branch is 4.0+ or 'master'."""
+    return branch == "master" or is_supported_numeric_version(branch)
+
+def parse_version_tuple(version):
+    """Parse version string into a tuple of integers for sorting."""
+    try:
+        return tuple(map(int, version.split(".")))
+    except ValueError:
+        return (0, 0)  # invalid versions sort last
 
 def compute_next_version(versioned_branches):
     """Compute the next semantic version after the highest supported branch."""
     numeric_versions = [v for v in versioned_branches if v != "master"]
     if not numeric_versions:
         return "4.0"
-    last = numeric_versions[-1]
+    last = numeric_versions[0]  # Already sorted descending
     major, minor = map(int, last.split("."))
     return f"{major}.{minor + 1}"
 
@@ -235,9 +244,8 @@ def main():
     update_gdextension_file(plugin_name, version)
 
     print(f"\nSuccessfully switched to godot-cpp branch: {selected_branch}")
-    print("You can now commit the submodule update with:")
-    print("    git add godot-cpp .gitmodules")
-    print(f"    git commit -m \"Update godot-cpp to {selected_branch}\"")
+    print("\nPlease recompile the plugin to apply changes.\n")
+    input("Press any key to continue...")
 
 if __name__ == "__main__":
     try:

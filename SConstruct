@@ -24,7 +24,7 @@ def find_sources(dirs, exts):
     return sources
 
 # Configuration
-libname = "PLUGIN_NAME_GOES_HERE"  # Replace with your plugin name
+libname = "plugin_name_goes_here"  # Replace with your plugin name
 projectdir = "test_project"      # Directory where the built library will be installed
 
 # Set up the environment
