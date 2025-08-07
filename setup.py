@@ -49,16 +49,11 @@ def handle_option(choice):
     
     if choice == '1':  # Change Godot Target Version
         change_version_path = os.path.join(script_dir, "tools", "change_version.py")
-        result = subprocess.run([sys.executable, change_version_path], capture_output=True, text=True)
+        result = subprocess.run([sys.executable, change_version_path])
         if result.returncode != 0:
             print(result.stderr)
             input("Press Enter to continue...")
             return
-        
-        # TODO
-        print("NOT IMPLEMENTED YET")
-        input("Press Enter to return...")
-
     elif choice == '2':  # Rename Plugin
         while True:
             plugin_name = input("Please enter your plugin name: ").strip()
