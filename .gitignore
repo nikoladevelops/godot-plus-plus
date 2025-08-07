@@ -2,22 +2,11 @@
 *.gen.*
 .godot/
 
-# Ignore library files but not the gdextension file
-demo/bin/*
-!demo/bin/android
-demo/bin/android/*
-!demo/bin/android/.gitkeep
-!demo/bin/linux
-demo/bin/linux/*
-!demo/bin/linux/.gitkeep
-!demo/bin/macos
-demo/bin/macos/*
-!demo/bin/macos/.gitkeep
-!demo/bin/windows
-demo/bin/windows/*
-!demo/bin/windows/.gitkeep
-!demo/bin/*.gdextension
-.sconsign*.dblite
+# Ignore the top-level bin folder
+/bin/
+
+# Ignore all bin folders inside test_project
+/test_project/**/bin/
 
 # Ignore custom.py
 custom.py
@@ -26,7 +15,7 @@ custom.py
 compile_commands.json
 
 # Ignore files generated for documentation
-/src/gen
+/gen/
 
 # Binaries
 *.o
@@ -46,17 +35,129 @@ compile_commands.json
 *.idb
 *.exp
 
+# Additional binaries
+*.a              # Static libraries (Linux/macOS)
+*.la             # libtool archives
+*.lo             # libtool objects
+*.dll            # Windows dynamic libraries
+*.dylib          # macOS dynamic libraries
+*.exe            # Windows executables
+*.out            # Common output file
+*.app            # macOS applications
+*.bin            # Raw binaries
+*.elf            # Executable and Linkable Format
+*.hex            # Intel HEX files (embedded)
+*.map            # Linker map files
+*.wasm           # WebAssembly modules
+*.mod            # Fortran/C++ modules
+*.sav            # Saved states (e.g., from emulators or tools)
+*.d              # Dependency files (e.g., from `-MD` in GCC)
+
 # Other stuff
 *.log
 
-# VSCode
+# VS Code
 .vscode/*
 !.vscode/extensions.json
+!.vscode/settings.json
+
+# macOS Finder
 .DS_Store
 
-# Jetbrains
+# JetBrains CLion / IntelliJ / Rider
 .idea/
+*.iml
+*.ipr
+*.iws
+cmake-build-*/
 
-# Cmake
-cmake-build*
+# KDevelop
+.kdev4/
+.kdevduchain/
+.kdev_include_paths
+.kdevses
+
+# Zed Editor
+.zed/
+
+# Sublime Text
+*.sublime-workspace
+*.sublime-project
+
+# Visual Studio (Community/Pro/Enterprise)
+*.sln
+*.suo
+*.vcxproj
+*.vcxproj.filters
+*.vcxproj.user
+*.ncb
+*.sdf
+*.opensdf
+*.vc.db
+*.ipch
+*.obj
+*.log
+*.tlog/
+*.idb
+*.pch
+*.pdb
+*.res
+*.exp
+*.dll
+*.lib
+Debug/
+Release/
+x64/
+*.vspscc
+*.vssscc
+*.user
+*.cache/
+.vs/
+
+# Visual Studio Code CodeSpaces
+.code-workspace
+
+# CMake
+CMakeCache.txt
+CMakeFiles/
 CMakeUserPresets.json
+cmake_install.cmake
+Makefile
+CTestTestfile.cmake
+*.cmake
+
+# Code::Blocks
+*.depend
+*.layout
+*.cbp
+*.workspace
+
+# Eclipse CDT
+.project
+.cproject
+.settings/
+
+# NetBeans
+nbproject/private/
+build/
+nbbuild/
+dist/
+nbdist/
+.nb-gradle/
+
+# Qt Creator
+*.pro.user*
+*.qbs.user*
+*.pro.user
+*.qmake.stash
+*.autosave
+
+# Other backup/temp/editor junk
+*.bak
+*.tmp
+*~
+*.swp
+*.swo
+*.orig
+*.old
+*.log

@@ -1,0 +1,4 @@
+{
+  // Prevent explorer from auto-revealing files
+  "explorer.autoReveal": false,
+}
