@@ -8,6 +8,7 @@ def clear_screen():
     """Clear the terminal screen cross-platform."""
     os.system('cls' if os.name == 'nt' else 'clear')
 
+
 def read_dont_touch():
     """Read the first and second lines from dont_touch.txt."""
     try:
@@ -17,20 +18,16 @@ def read_dont_touch():
                 raise ValueError("dont_touch.txt does not have at least two lines")
             return lines[0].strip(), lines[1].strip()
     except (FileNotFoundError, IOError, ValueError):
-        print("Someone deleted or touched the dont_touch.txt file used for storing important data,")
-        print("you can't use the functionality anymore sorry, you'll have to edit the appropriate")
-        print("files yourself, check out the scripts inside the tools folder for more info")
+        print("Someone deleted or modified the dont_touch.txt file used for storing important data.")
+        print("You can't use the functionality anymore. You'll have to edit the appropriate files manually.")
+        print("Check the scripts inside the tools folder for guidance.")
         sys.exit(1)
 
 
 def display_start_screen():
-    print("\n")
-    print("=== Godot C++ GDExtension Setup Tool By @realNikich ===")
-    print("\n")
+    print("\n=== Godot C++ GDExtension Setup Tool By @realNikich ===\n")
     print("Official GitHub Repository: https://github.com/nikoladevelops/godot-plus-plus")
-    print("Find Godot GDExtension Tutorials Here: https://youtube.com/@realNikich")
-    
-    print("\n")
+    print("Find Godot GDExtension Tutorials Here: https://youtube.com/@realNikich\n")
     input("Press any key to continue...")
     clear_screen()
 
@@ -38,76 +35,76 @@ def display_start_screen():
 def display_menu():
     """Display the main menu options."""
     clear_screen()
-    
 
-    # Read dont_touch.txt before proceeding
     first_line, second_line = read_dont_touch()
     
     print(f"Current Plugin Name: {first_line}")
-    print(f"Current Targeted Godot Version: {second_line}")
+    print(f"Current Targeted Godot Version: {second_line}\n")
 
-    print("\n")
-
-    print("Choose an option")
-
+    print("Choose an option:")
     print("1. Change Godot Target Version")
     print("2. Rename Plugin")
-    print("3. Prepare For Export")
-    print("Enter your choice (1-3), 'q' to quit: ")
+    print("3. Compile Plugin Debug Build")
+    print("4. Generate Missing XML Documentation Files")
+    print("5. Commit And Push To GitHub")
+    print("6. Export Plugin")
+    print("Enter your choice (1-6), or 'q' to quit: ")
+
+
+def run_tool_script(script_filename):
+    """Run a script from the tools folder and handle errors/output."""
+    script_path = os.path.join(script_dir, "tools", script_filename)
+    result = subprocess.run([sys.executable, script_path])
+    
+    if result.returncode != 0:
+        print(result.stderr or "An error occurred.")
+        input("Press Enter to continue...")
+
 
 def handle_option(choice):
-    """Handle the selected option and wait for 'b' input."""
+    """Handle the selected menu option."""
     clear_screen()
-    
-    if choice == '1':  # Change Godot Target Version
-        change_version_path = os.path.join(script_dir, "tools", "change_version.py")
-        result = subprocess.run([sys.executable, change_version_path])
-        if result.returncode != 0:
-            print(result.stderr)
-            input("Press Enter to continue...")
-            return
-    elif choice == '2':  # Rename Plugin
-        while True:
-                renaming_path = os.path.join(script_dir, "tools", "renaming.py")
-                result = subprocess.run([sys.executable, renaming_path])
-                if result.returncode != 0:
-                    print(result.stderr)
-                    input("Press Enter to continue...")
-                    return
-                break
-    elif choice == '3':  # Prepare For Export
-        prepare_export_path = os.path.join(script_dir, "tools", "prepare_export.py")
-        result = subprocess.run([sys.executable, prepare_export_path], capture_output=True, text=True)
-        if result.returncode != 0:
-            print(result.stderr)
-            input("Press Enter to continue...")
-            return
-    
-        # TODO
-        print("NOT IMPLEMENTED YET")
-        input("Press Enter to return...")
-        
+    script_map = {
+        '1': "change_version.py",
+        '2': "renaming.py",
+        '3': "compile_debug_build.py",
+        '4': "generate_xml_docs.py",
+        '5': "git_commit_push.py",
+        '6': "export_plugin.py",
+    }
+
+    script_name = script_map.get(choice)
+    if script_name:
+        run_tool_script(script_name)
+    else:
+        print("Invalid option.")
+        input("Press Enter to continue...")
+
 
 def main():
     """Main loop to display menu and handle user input."""
-
     display_start_screen()
+    valid_choices = {'1', '2', '3', '4', '5', '6'}
+
     while True:
         display_menu()
-        user_input = input().lower()
+        user_input = input().strip().lower()
+
         if user_input == 'q':
             print("Quitting...")
             sys.exit(0)
-        if user_input not in ['1', '2', '3']:
+
+        if user_input not in valid_choices:
             print("Invalid choice. Please enter a valid option or 'q' to quit.")
             input("Press Enter to continue...")
             continue
 
         handle_option(user_input)
 
+
 if __name__ == "__main__":
     try:
         main()
     except KeyboardInterrupt:
-        print("Quitting...")
+        print("\nQuitting...")
         sys.exit(0)
