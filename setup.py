@@ -22,13 +22,23 @@ def read_dont_touch():
         print("files yourself, check out the scripts inside the tools folder for more info")
         sys.exit(1)
 
+
+def display_start_screen():
+    print("\n")
+    print("=== Godot C++ GDExtension Setup Tool By @realNikich ===")
+    print("\n")
+    print("Official GitHub Repository: https://github.com/nikoladevelops/godot-plus-plus")
+    print("Find Godot GDExtension Tutorials Here: https://youtube.com/@realNikich")
+    
+    print("\n")
+    input("Press any key to continue...")
+    clear_screen()
+
+
 def display_menu():
     """Display the main menu options."""
     clear_screen()
-    print("=== Godot C++ Template Setup ===")
-    print("Official GitHub Repository: https://github.com/nikoladevelops/godot-plus-plus")
-    print("Find Godot GDExtension Tutorials Here: youtube.com/@realNikich")
-    print("\n")
+    
 
     # Read dont_touch.txt before proceeding
     first_line, second_line = read_dont_touch()
@@ -36,15 +46,14 @@ def display_menu():
     print(f"Current Plugin Name: {first_line}")
     print(f"Current Targeted Godot Version: {second_line}")
 
-    print("Warning: When Using This GDExtension Setup Tool, Please Make Sure Godot Is Closed And You Are Not Playing The Test Project")
-    print("Warning: Your Plugin Name Will Always Be Lowercase When Used As File Name Or Directory Name. This Is The Correct Convention In Godot")
-    print("Note: If you receive any errors when running the test project, please recompile the code (with Godot closed) and run the test project again")
+    print("\n")
+
     print("Choose an option")
 
     print("1. Change Godot Target Version")
     print("2. Rename Plugin")
     print("3. Prepare For Export")
-    print("Enter your choice (1-3), 'exit' to quit: ")
+    print("Enter your choice (1-3), 'q' to quit: ")
 
 def handle_option(choice):
     """Handle the selected option and wait for 'b' input."""
@@ -59,20 +68,13 @@ def handle_option(choice):
             return
     elif choice == '2':  # Rename Plugin
         while True:
-            plugin_name = input("Please enter your plugin name: ").strip()
-            if plugin_name:
-                # Call renaming.py with the plugin name
                 renaming_path = os.path.join(script_dir, "tools", "renaming.py")
-                result = subprocess.run([sys.executable, renaming_path, plugin_name])
+                result = subprocess.run([sys.executable, renaming_path])
                 if result.returncode != 0:
                     print(result.stderr)
                     input("Press Enter to continue...")
                     return
                 break
-            print("Plugin name cannot be empty. Please try again.")
-
-        # Refresh the lines after updating
-        first_line, second_line = read_dont_touch()
     elif choice == '3':  # Prepare For Export
         prepare_export_path = os.path.join(script_dir, "tools", "prepare_export.py")
         result = subprocess.run([sys.executable, prepare_export_path], capture_output=True, text=True)
@@ -88,14 +90,16 @@ def handle_option(choice):
 
 def main():
     """Main loop to display menu and handle user input."""
+
+    display_start_screen()
     while True:
         display_menu()
         user_input = input().lower()
-        if user_input == 'exit':
-            print("Exiting...")
+        if user_input == 'q':
+            print("Quitting...")
             sys.exit(0)
         if user_input not in ['1', '2', '3']:
-            print("Invalid choice. Please enter 1, 2, 3, or 'exit'.")
+            print("Invalid choice. Please enter a valid option or 'q' to quit.")
             input("Press Enter to continue...")
             continue
 
@@ -105,5 +109,5 @@ if __name__ == "__main__":
     try:
         main()
     except KeyboardInterrupt:
-        print("\nExiting...")
+        print("Quitting...")
         sys.exit(0)

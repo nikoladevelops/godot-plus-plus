@@ -99,24 +99,26 @@ def validate_dont_touch_version(branches):
         if version == expected_master_version:
             print(f"Currently selected version: {version} (derived from master)")
         else:
-            print(f"Warning: Your dont_touch.txt version '{version}' is not a valid godot-cpp branch.")
+            print(f"Warning: The Godot version inside dont_touch.txt '{version}' is not a valid godot-cpp branch.")
 
 def prompt_branch_selection(branches):
     """Prompt user to select a branch by index or name."""
     print("Available branches:")
     for i, branch in enumerate(branches, 1):
         print(f"{i}. {branch}")
-    print(f"{len(branches) + 1}. Exit")
-
+    
+    print("If you want to quit then type 'q'")
+    print("\n")
     user_input = input("Enter branch number or name: ").strip()
+
+    if user_input.lower() == 'q':
+        print("Quitting...")
+        sys.exit(0)
 
     if user_input.isdigit():
         index = int(user_input) - 1
         if 0 <= index < len(branches):
             return branches[index]
-        elif index == len(branches):
-            print("Returning to setup.py...")
-            sys.exit(0)
         else:
             print("Invalid branch number selected.")
             sys.exit(1)
@@ -210,8 +212,10 @@ def update_gdextension_file(plugin_name, version):
         print(f"Failed to update .gdextension file: {e}")
         sys.exit(1)
 
-def main():
-    print("Godot C++ Version Switch Tool\n")
+def switch_godot_cpp_version():
+    print("Tool For Switching godot_cpp Version By @realNikich\n")
+    print("Warning: After changing the Godot target version, you need to recompile your code for the changes to take effect.")
+    
 
     # Ensure the godot-cpp submodule is initialized
     git_path = os.path.join(SUBMODULE_PATH, ".git")
@@ -249,7 +253,7 @@ def main():
 
 if __name__ == "__main__":
     try:
-        main()
+        switch_godot_cpp_version()
     except KeyboardInterrupt:
         print("\nOperation cancelled.")
         sys.exit(0)

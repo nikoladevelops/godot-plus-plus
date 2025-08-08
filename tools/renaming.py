@@ -215,15 +215,26 @@ def update_plugin_name(new_name):
         sys.exit(1)
 
 if __name__ == "__main__":
-    if len(sys.argv) < 2:
-        print("Usage: python renaming.py <new_plugin_name>", file=sys.stderr)
+    if len(sys.argv) < 1:
+        print("Usage: python renaming.py", file=sys.stderr)
         sys.exit(1)
+    
+    print("Tool For Renaming Your GDExtension Plugin By @realNikich\n")
+    print("Warning: Your plugin name will always be lowercase when used as a file or directory name. This follows the correct naming convention in Godot, so do NOT change it.")
+    print("Warning: Before renaming, make sure your test project is closed and the game is not running.")
+    print("Warning: After renaming, you need to recompile your code because the bin folders will be deleted.")
+    print("\n")
 
-    raw_input_name = " ".join(sys.argv[1:])
-    sanitized = sanitize_and_validate_filename(raw_input_name)
+    new_plugin_name = input("Please enter your plugin name or type 'q' to quit: ").strip()
+
+    if new_plugin_name.lower() == 'q':
+        print("Quitting...")
+        sys.exit(0)
+
+    sanitized = sanitize_and_validate_filename(new_plugin_name)
 
     if not sanitized:
         print("Error: Invalid plugin name. Please use a valid identifier.", file=sys.stderr)
         sys.exit(1)
-
-    update_plugin_name(sanitized)
+    else:
+        update_plugin_name(sanitized)
