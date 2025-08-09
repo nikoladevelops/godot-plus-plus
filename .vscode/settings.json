@@ -67,7 +67,7 @@
     "include/**/*.sav": true,
     "include/**/*.d": true,
     ".cache": true,
-    ".github": true,
+    ".github": false,
     "__pycache__": true,
     "gen": true
 }

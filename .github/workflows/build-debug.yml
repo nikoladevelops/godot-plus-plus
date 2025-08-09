@@ -1,0 +1,127 @@
+name: Build GDExtension (Debug)
+on:
+  push:
+    branches-ignore:
+      - main
+  pull_request:
+  workflow_call:
+
+jobs:
+  build:
+    strategy:
+      fail-fast: false
+      matrix:
+        target:
+          - { platform: linux, arch: x86_32, os: ubuntu-22.04 }
+          - { platform: linux, arch: x86_64, os: ubuntu-22.04 }
+          - { platform: linux, arch: arm32, os: ubuntu-22.04-arm }
+          - { platform: linux, arch: arm64, os: ubuntu-22.04-arm }
+          - { platform: linux, arch: rv64, os: ubuntu-22.04 }
+          - { platform: windows, arch: x86_32, os: windows-latest }
+          - { platform: windows, arch: x86_64, os: windows-latest }
+          - { platform: windows, arch: arm64, os: windows-latest }
+          - { platform: macos, arch: universal, os: macos-latest }
+          - { platform: android, arch: x86_64, os: ubuntu-22.04 }
+          - { platform: android, arch: arm32, os: ubuntu-22.04 }
+          - { platform: android, arch: arm64, os: ubuntu-22.04 }
+          - { platform: ios, arch: universal, os: macos-latest }
+          - { platform: web, arch: wasm32, os: ubuntu-22.04, threads: enabled }
+          - { platform: web, arch: wasm32, os: ubuntu-22.04, threads: disabled }
+        float-precision: [single, double]
+        target-type: [template_debug]
+
+    runs-on: ${{ matrix.target.os }}
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+        with:
+          submodules: true
+
+      - name: Install multilib support
+        if: ${{ matrix.target.platform == 'linux' && matrix.target.arch == 'x86_32' }}
+        run: |
+          sudo apt-get update && sudo apt-get install -y gcc-multilib g++-multilib
+
+      - name: Install RISC-V toolchain
+        if: ${{ matrix.target.platform == 'linux' && matrix.target.arch == 'rv64' }}
+        run: |
+          sudo apt-get update && sudo apt-get install -y gcc-riscv64-linux-gnu g++-riscv64-linux-gnu
+
+      - name: Setup godot-cpp
+        uses: ./godot-cpp/.github/actions/setup-godot-cpp
+        with:
+          platform: ${{ matrix.target.platform }}
+          em-version: 3.1.62
+
+      - name: Restore .scons_cache
+        uses: ./godot-cpp/.github/actions/godot-cache-restore
+        with:
+          scons-cache: ${{ github.workspace }}/.scons-cache/
+          cache-name: ${{ matrix.target.platform }}_${{ matrix.target.arch }}_${{ matrix.float-precision }}_${{ matrix.target-type }}
+
+      - name: Build godot-cpp for macOS/iOS (framework/xcframework)
+        if: ${{ matrix.target.platform == 'macos' || matrix.target.platform == 'ios' }}
+        run: |
+          cd godot-cpp
+          scons platform=${{ matrix.target.platform }} arch=x86_64 target=${{ matrix.target-type }} precision=${{ matrix.float-precision }} threads_enabled=${{ matrix.target.threads == 'enabled' && 'true' || 'false' }}
+          scons platform=${{ matrix.target.platform }} arch=arm64 target=${{ matrix.target-type }} precision=${{ matrix.float-precision }} threads_enabled=${{ matrix.target.threads == 'enabled' && 'true' || 'false' }}
+          if [ "${{ matrix.target.platform }}" = "macos" ]; then
+            mkdir -p bin/libgodot-cpp.macos.template_${{ matrix.target-type }}.framework
+            lipo -create bin/libgodot-cpp.macos.template_${{ matrix.target-type }}.x86_64.a bin/libgodot-cpp.macos.template_${{ matrix.target-type }}.arm64.a -output bin/libgodot-cpp.macos.template_${{ matrix.target-type }}.framework/libgodot-cpp
+            cp -r misc/macos/Info.plist bin/libgodot-cpp.macos.template_${{ matrix.target-type }}.framework/Info.plist
+            mv bin/libgodot-cpp.macos.template_${{ matrix.target-type }}.framework ../bin/macos/
+          else
+            xcodebuild -create-xcframework \
+              -library bin/libgodot-cpp.ios.template_${{ matrix.target-type }}.arm64.a \
+              -library bin/libgodot-cpp.ios.template_${{ matrix.target-type }}.x86_64.a \
+              -output bin/libgodot-cpp.ios.template_${{ matrix.target-type }}.xcframework
+            mv bin/libgodot-cpp.ios.template_${{ matrix.target-type }}.xcframework ../bin/ios/
+          fi
+
+      - name: Build GDExtension
+        shell: sh
+        env:
+          SCONS_CACHE: ${{ github.workspace }}/.scons-cache/
+        run: |
+          scons target=${{ matrix.target-type }} platform=${{ matrix.target.platform }} arch=${{ matrix.target.arch }} precision=${{ matrix.float-precision }} threads_enabled=${{ matrix.target.threads == 'enabled' && 'true' || 'false' }} threads=${{ matrix.target.threads || 'disabled' }} lto=none
+
+      - name: Save .scons_cache
+        uses: ./godot-cpp/.github/actions/godot-cache-save
+        with:
+          scons-cache: ${{ github.workspace }}/.scons-cache/
+          cache-name: ${{ matrix.target.platform }}_${{ matrix.target.arch }}_${{ matrix.float-precision }}_${{ matrix.target-type }}
+
+      - name: Windows - Delete compilation files
+        if: ${{ matrix.target.platform == 'windows' }}
+        shell: pwsh
+        run: |
+          Remove-Item bin/* -Include *.exp,*.lib,*.pdb -Force
+
+      - name: Run Tests (Linux, Debug)
+        if: ${{ matrix.target.platform == 'linux' && matrix.target.arch == 'x86_64' && matrix.target-type == 'template_debug' }}
+        run: |
+          wget "https://github.com/godotengine/godot-builds/releases/download/stable/Godot_v4.3-stable_linux.x86_64.zip" -O Godot.zip
+          unzip -a Godot.zip
+          chmod +x Godot_v4.3-stable_linux.x86_64
+          cd test_project
+          ../Godot_v4.3-stable_linux.x86_64 --headless --import
+          ../Godot_v4.3-stable_linux.x86_64 --headless --script run-tests.gd
+
+      - name: Upload Artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: godot-plus-plus-${{ matrix.target.platform }}-${{ matrix.target.arch }}-${{ matrix.float-precision }}-${{ matrix.target-type }}
+          path: |
+            ${{ github.workspace }}/bin/**
+            ${{ github.workspace }}/test_project/**
+
+  merge:
+    runs-on: ubuntu-22.04
+    needs: build
+    steps:
+      - name: Merge Artifacts
+        uses: actions/upload-artifact/merge@v4
+        with:
+          name: godot-plus-plus-debug
+          pattern: godot-plus-plus-*
+          delete-merged: true
