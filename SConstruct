@@ -81,7 +81,7 @@ if env.get("target") in ["editor", "template_debug"]:
 
 # Determine the library filename using godot-cpp naming
 suffix = f".{env['target']}"
-if env['platform'] in ['linux', 'android'] and env['arch'] in ['x86_32', 'x86_64', 'arm32', 'arm64', 'rv64']:
+if env['platform'] in ['linux', 'android'] and env['arch'] in ['x86_32', 'x86_64', 'arm32', 'arm64']:
     suffix += f".{env['arch']}"
 if env['platform'] == 'windows' and env['arch'] in ['x86_32', 'x86_64', 'arm64']:
     suffix += f".{env['arch']}"
@@ -96,13 +96,13 @@ lib_filename = f"{env.subst('$SHLIBPREFIX')}{libname}{suffix}{env.subst('$SHLIBS
 library = None
 if env['platform'] in ['macos', 'ios']:
     # For macOS and iOS, build for multiple architectures and create framework/xcframework
-    arches = ['x86_64', 'arm64'] if env['platform'] == 'macos' else ['arm64', 'x86_64']
+    arches = ['x86_64', 'arm64'] if env['platform'] == 'macos' else ['arm64']
     temp_libs = []
     for arch in arches:
         arch_env = env.Clone()
         arch_env['arch'] = arch
         arch_suffix = f".{env['target']}.{arch}"
-        if env.get('precision') == 'double':
+        if env.get('precision') == 'double' and env['platform'] != 'macos':
             arch_suffix += '.double'
         arch_lib_filename = f"{env.subst('$SHLIBPREFIX')}{libname}{arch_suffix}{env.subst('$SHLIBSUFFIX')}"
         arch_lib = arch_env.SharedLibrary(
@@ -113,7 +113,7 @@ if env['platform'] in ['macos', 'ios']:
     
     # Create .framework for macOS or .xcframework for iOS
     if env['platform'] == 'macos':
-        framework_name = f"lib{libname}.macos.{env['target']}.framework"
+        framework_name = f"lib{libname}.macos.{env['target']}.{env['precision']}.framework"
         library = env.Command(
             f"bin/macos/{framework_name}",
             temp_libs,
@@ -124,10 +124,15 @@ if env['platform'] in ['macos', 'ios']:
             """
         )
     else:  # iOS
+        framework_name = f"lib{libname}.ios.{env['target']}.{env['precision']}.xcframework"
         library = env.Command(
-            f"bin/ios/lib{libname}.ios.{env['target']}.xcframework",
+            f"bin/ios/{framework_name}",
             temp_libs,
-            "xcodebuild -create-xcframework $SOURCES -output $TARGET"
+            """
+            xcodebuild -create-xcframework \
+              -library $SOURCES \
+              -output $TARGET
+            """
         )
 else:
     # For other platforms, build a single shared library

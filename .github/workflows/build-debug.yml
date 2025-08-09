@@ -1,6 +1,6 @@
 name: Build GDExtension (Debug)
 on:
-  workflow_dispatch:  # Run only via manual trigger in GitHub UI
+  workflow_dispatch:
   workflow_call:
 
 jobs:
@@ -13,7 +13,6 @@ jobs:
           - { platform: linux, arch: x86_64, os: ubuntu-22.04 }
           - { platform: linux, arch: arm32, os: ubuntu-22.04-arm }
           - { platform: linux, arch: arm64, os: ubuntu-22.04-arm }
-          - { platform: linux, arch: rv64, os: ubuntu-22.04 }
           - { platform: windows, arch: x86_32, os: windows-latest }
           - { platform: windows, arch: x86_64, os: windows-latest }
           - { platform: windows, arch: arm64, os: windows-latest }
@@ -21,7 +20,7 @@ jobs:
           - { platform: android, arch: x86_64, os: ubuntu-22.04 }
           - { platform: android, arch: arm32, os: ubuntu-22.04 }
           - { platform: android, arch: arm64, os: ubuntu-22.04 }
-          - { platform: ios, arch: universal, os: macos-latest }
+          - { platform: ios, arch: arm64, os: macos-latest }
           - { platform: web, arch: wasm32, os: ubuntu-22.04, threads: enabled }
           - { platform: web, arch: wasm32, os: ubuntu-22.04, threads: disabled }
         float-precision: [single, double]
@@ -39,11 +38,6 @@ jobs:
         run: |
           sudo apt-get update && sudo apt-get install -y gcc-multilib g++-multilib
 
-      - name: Install RISC-V toolchain
-        if: ${{ matrix.target.platform == 'linux' && matrix.target.arch == 'rv64' }}
-        run: |
-          sudo apt-get update && sudo apt-get install -y gcc-riscv64-linux-gnu g++-riscv64-linux-gnu
-
       - name: Setup godot-cpp
         uses: ./godot-cpp/.github/actions/setup-godot-cpp
         with:
@@ -56,23 +50,23 @@ jobs:
           scons-cache: ${{ github.workspace }}/.scons-cache/
           cache-name: ${{ matrix.target.platform }}_${{ matrix.target.arch }}_${{ matrix.float-precision }}_${{ matrix.target-type }}
 
-      - name: Build godot-cpp for macOS/iOS (framework/xcframework)
+      - name: Build godot-cpp for macOS/iOS
         if: ${{ matrix.target.platform == 'macos' || matrix.target.platform == 'ios' }}
         run: |
           cd godot-cpp
-          scons platform=${{ matrix.target.platform }} arch=x86_64 target=${{ matrix.target-type }} precision=${{ matrix.float-precision }} threads=${{ matrix.target.threads == 'enabled' && 'true' || 'false' }} use_lto=false
-          scons platform=${{ matrix.target.platform }} arch=arm64 target=${{ matrix.target-type }} precision=${{ matrix.float-precision }} threads=${{ matrix.target.threads == 'enabled' && 'true' || 'false' }} use_lto=false
           if [ "${{ matrix.target.platform }}" = "macos" ]; then
-            mkdir -p bin/libgodot-cpp.macos.${{ matrix.target-type }}.framework
-            lipo -create bin/libgodot-cpp.macos.${{ matrix.target-type }}.x86_64.a bin/libgodot-cpp.macos.${{ matrix.target-type }}.arm64.a -output bin/libgodot-cpp.macos.${{ matrix.target-type }}.framework/libgodot-cpp
-            cp -r misc/macos/Info.plist bin/libgodot-cpp.macos.${{ matrix.target-type }}.framework/Info.plist
-            mv bin/libgodot-cpp.macos.${{ matrix.target-type }}.framework ../bin/macos/
+            scons platform=${{ matrix.target.platform }} arch=x86_64 target=${{ matrix.target-type }} precision=${{ matrix.float-precision }} threads=${{ matrix.target.threads == 'enabled' && 'true' || 'false' }} use_lto=false
+            scons platform=${{ matrix.target.platform }} arch=arm64 target=${{ matrix.target-type }} precision=${{ matrix.float-precision }} threads=${{ matrix.target.threads == 'enabled' && 'true' || 'false' }} use_lto=false
+            mkdir -p bin/libgodot-cpp.macos.${{ matrix.target-type }}.${{ matrix.float-precision }}.framework
+            lipo -create bin/libgodot-cpp.macos.${{ matrix.target-type }}.x86_64.a bin/libgodot-cpp.macos.${{ matrix.target-type }}.arm64.a -output bin/libgodot-cpp.macos.${{ matrix.target-type }}.${{ matrix.float-precision }}.framework/libgodot-cpp
+            cp -r misc/macos/Info.plist bin/libgodot-cpp.macos.${{ matrix.target-type }}.${{ matrix.float-precision }}.framework/Info.plist
+            mv bin/libgodot-cpp.macos.${{ matrix.target-type }}.${{ matrix.float-precision }}.framework ../bin/macos/
           else
+            scons platform=${{ matrix.target.platform }} arch=arm64 target=${{ matrix.target-type }} precision=${{ matrix.float-precision }} threads=${{ matrix.target.threads == 'enabled' && 'true' || 'false' }}
             xcodebuild -create-xcframework \
               -library bin/libgodot-cpp.ios.${{ matrix.target-type }}.arm64.a \
-              -library bin/libgodot-cpp.ios.${{ matrix.target-type }}.x86_64.a \
-              -output bin/libgodot-cpp.ios.${{ matrix.target-type }}.xcframework
-            mv bin/libgodot-cpp.ios.${{ matrix.target-type }}.xcframework ../bin/ios/
+              -output bin/libgodot-cpp.ios.${{ matrix.target-type }}.${{ matrix.float-precision }}.xcframework
+            mv bin/libgodot-cpp.ios.${{ matrix.target-type }}.${{ matrix.float-precision }}.xcframework ../bin/ios/
           fi
 
       - name: Build GDExtension
@@ -97,7 +91,7 @@ jobs:
       - name: Run Tests (Linux, Debug)
         if: ${{ matrix.target.platform == 'linux' && matrix.target.arch == 'x86_64' && matrix.target-type == 'template_debug' }}
         run: |
-          wget "https://github.com/godotengine/godot-builds/releases/download/stable/Godot_v4.3-stable_linux.x86_64.zip" -O Godot.zip
+          wget "https://github.com/godotengine/godot-builds/releases/download/4.3-stable/Godot_v4.3-stable_linux.x86_64.zip" -O Godot.zip
           unzip -a Godot.zip
           chmod +x Godot_v4.3-stable_linux.x86_64
           cd test_project
@@ -107,10 +101,11 @@ jobs:
       - name: Upload Artifact
         uses: actions/upload-artifact@v4
         with:
-          name: godot-plus-plus-${{ matrix.target.platform }}-${{ matrix.target.arch }}-${{ matrix.float-precision }}-${{ matrix.target-type }}
+          name: godot-plus-plus-${{ matrix.target.platform }}-${{ matrix.target.arch }}-${{ matrix.float-precision }}-${{ matrix.target-type }}${{ matrix.target.threads != '' && format('-{0}', matrix.target.threads) || '' }}
           path: |
             ${{ github.workspace }}/bin/**
             ${{ github.workspace }}/test_project/**
+            !${{ github.workspace }}/bin/**/libgodot-cpp*.a
 
   merge:
     runs-on: ubuntu-22.04
