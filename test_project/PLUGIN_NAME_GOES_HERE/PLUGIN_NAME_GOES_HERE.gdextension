@@ -67,3 +67,18 @@ web.wasm32.single.debug.nothreads = "./bin/web/libplugin_name_goes_here.web.temp
 web.wasm32.double.debug.nothreads = "./bin/web/libplugin_name_goes_here.web.template_debug.wasm32.double.nothreads.wasm"
 web.wasm32.single.release.nothreads = "./bin/web/libplugin_name_goes_here.web.template_release.wasm32.nothreads.wasm"
 web.wasm32.double.release.nothreads = "./bin/web/libplugin_name_goes_here.web.template_release.wasm32.double.nothreads.wasm"
+
+
+[dependencies]
+ios.single.debug = {
+  "./bin/libgodot-cpp.ios.template_debug.single.xcframework": ""
+}
+ios.double.debug = {
+  "./bin/libgodot-cpp.ios.template_debug.double.xcframework": ""
+}
+ios.single.release = {
+  "./bin/libgodot-cpp.ios.template_release.single.xcframework": ""
+}
+ios.double.release = {
+  "./bin/libgodot-cpp.ios.template_release.double.xcframework": ""
+}

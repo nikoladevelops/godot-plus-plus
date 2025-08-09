@@ -24,8 +24,8 @@ def find_sources(dirs, exts):
     return sources
 
 # Configuration
-libname = "plugin_name_goes_here"  # Replace with your plugin name
-projectdir = "test_project"        # Directory where the built library will be installed
+libname = "plugin_name_goes_here"
+projectdir = "test_project"
 
 # Set up the environment
 env = Environment(tools=["default"], PLATFORM="")
@@ -92,6 +92,63 @@ if env['platform'] not in ['macos', 'ios'] and env.get('precision') == 'double':
 
 lib_filename = f"{env.subst('$SHLIBPREFIX')}{libname}{suffix}{env.subst('$SHLIBSUFFIX')}"
 
+# Generate Info.plist content for macOS and iOS
+def generate_info_plist(platform, target, precision):
+    if platform == 'macos':
+        return f"""<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
+<plist version="1.0">
+<dict>
+    <key>CFBundleExecutable</key>
+    <string>lib{libname}.{target}</string>
+    <key>CFBundleIdentifier</key>
+    <string>org.godotengine.lib{libname}</string>
+    <key>CFBundleInfoDictionaryVersion</key>
+    <string>6.0</string>
+    <key>CFBundleName</key>
+    <string>lib{libname}.macos.{target}</string>
+    <key>CFBundlePackageType</key>
+    <string>FMWK</string>
+    <key>CFBundleShortVersionString</key>
+    <string>1.0.0</string>
+    <key>CFBundleSupportedPlatforms</key>
+    <array>
+        <string>MacOSX</string>
+    </array>
+    <key>CFBundleVersion</key>
+    <string>1.0.0</string>
+    <key>LSMinimumSystemVersion</key>
+    <string>10.12</string>
+</dict>
+</plist>"""
+    else:  # ios
+        return f"""<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
+<plist version="1.0">
+<dict>
+    <key>CFBundleExecutable</key>
+    <string>lib{libname}.{target}</string>
+    <key>CFBundleIdentifier</key>
+    <string>org.godotengine.lib{libname}</string>
+    <key>CFBundleInfoDictionaryVersion</key>
+    <string>6.0</string>
+    <key>CFBundleName</key>
+    <string>lib{libname}.ios.{target}</string>
+    <key>CFBundlePackageType</key>
+    <string>FMWK</string>
+    <key>CFBundleShortVersionString</key>
+    <string>1.0.0</string>
+    <key>CFBundleSupportedPlatforms</key>
+    <array>
+        <string>iPhoneOS</string>
+    </array>
+    <key>CFBundleVersion</key>
+    <string>1.0.0</string>
+    <key>LSMinimumSystemVersion</key>
+    <string>12.0</string>
+</dict>
+</plist>"""
+
 # Build the shared library
 library = None
 if env['platform'] in ['macos', 'ios']:
@@ -102,7 +159,7 @@ if env['platform'] in ['macos', 'ios']:
         arch_env = env.Clone()
         arch_env['arch'] = arch
         arch_suffix = f".{env['target']}.{arch}"
-        if env.get('precision') == 'double' and env['platform'] != 'macos':
+        if env.get('precision') == 'double':
             arch_suffix += '.double'
         arch_lib_filename = f"{env.subst('$SHLIBPREFIX')}{libname}{arch_suffix}{env.subst('$SHLIBSUFFIX')}"
         arch_lib = arch_env.SharedLibrary(
@@ -115,24 +172,24 @@ if env['platform'] in ['macos', 'ios']:
     if env['platform'] == 'macos':
         framework_name = f"lib{libname}.macos.{env['target']}.{env['precision']}.framework"
         library = env.Command(
-            f"bin/macos/{framework_name}",
+            f"{projectdir}/{libname}/bin/macos/{framework_name}",
             temp_libs,
-            """
-            mkdir -p $TARGET/$framework_name && \
-            lipo -create $SOURCES -output $TARGET/$framework_name/$libname && \
-            cp -r godot-cpp/misc/macos/Info.plist $TARGET/Info.plist
-            """
+            [
+                f"mkdir -p $TARGET",
+                f"lipo -create {' '.join('$SOURCES')} -output $TARGET/lib{libname}",
+                f"echo '{generate_info_plist('macos', env['target'], env['precision'])}' > $TARGET/Info.plist"
+            ]
         )
     else:  # iOS
         framework_name = f"lib{libname}.ios.{env['target']}.{env['precision']}.xcframework"
         library = env.Command(
-            f"bin/ios/{framework_name}",
+            f"{projectdir}/{libname}/bin/ios/{framework_name}",
             temp_libs,
-            """
-            xcodebuild -create-xcframework \
-              -library $SOURCES \
-              -output $TARGET
-            """
+            [
+                f"mkdir -p $TARGET",
+                f"xcodebuild -create-xcframework -library $SOURCES -output $TARGET",
+                f"echo '{generate_info_plist('ios', env['target'], env['precision'])}' > $TARGET/Info.plist"
+            ]
         )
 else:
     # For other platforms, build a single shared library

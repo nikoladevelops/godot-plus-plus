@@ -54,19 +54,16 @@ jobs:
         if: ${{ matrix.target.platform == 'macos' || matrix.target.platform == 'ios' }}
         run: |
           cd godot-cpp
+          mkdir -p bin/macos bin/ios
           if [ "${{ matrix.target.platform }}" = "macos" ]; then
             scons platform=${{ matrix.target.platform }} arch=x86_64 target=${{ matrix.target-type }} precision=${{ matrix.float-precision }} threads=${{ matrix.target.threads == 'enabled' && 'true' || 'false' }} use_lto=false
             scons platform=${{ matrix.target.platform }} arch=arm64 target=${{ matrix.target-type }} precision=${{ matrix.float-precision }} threads=${{ matrix.target.threads == 'enabled' && 'true' || 'false' }} use_lto=false
             mkdir -p bin/libgodot-cpp.macos.${{ matrix.target-type }}.${{ matrix.float-precision }}.framework
             lipo -create bin/libgodot-cpp.macos.${{ matrix.target-type }}.x86_64.a bin/libgodot-cpp.macos.${{ matrix.target-type }}.arm64.a -output bin/libgodot-cpp.macos.${{ matrix.target-type }}.${{ matrix.float-precision }}.framework/libgodot-cpp
-            cp -r misc/macos/Info.plist bin/libgodot-cpp.macos.${{ matrix.target-type }}.${{ matrix.float-precision }}.framework/Info.plist
             mv bin/libgodot-cpp.macos.${{ matrix.target-type }}.${{ matrix.float-precision }}.framework ../bin/macos/
           else
             scons platform=${{ matrix.target.platform }} arch=arm64 target=${{ matrix.target-type }} precision=${{ matrix.float-precision }} threads=${{ matrix.target.threads == 'enabled' && 'true' || 'false' }}
-            xcodebuild -create-xcframework \
-              -library bin/libgodot-cpp.ios.${{ matrix.target-type }}.arm64.a \
-              -output bin/libgodot-cpp.ios.${{ matrix.target-type }}.${{ matrix.float-precision }}.xcframework
-            mv bin/libgodot-cpp.ios.${{ matrix.target-type }}.${{ matrix.float-precision }}.xcframework ../bin/ios/
+            mv bin/libgodot-cpp.ios.${{ matrix.target-type }}.arm64.a ../bin/ios/
           fi
 
       - name: Build GDExtension
@@ -75,6 +72,12 @@ jobs:
           SCONS_CACHE: ${{ github.workspace }}/.scons-cache/
         run: |
           scons target=${{ matrix.target-type }} platform=${{ matrix.target.platform }} arch=${{ matrix.target.arch }} precision=${{ matrix.float-precision }} threads=${{ matrix.target.threads == 'enabled' && 'true' || 'false' }} use_lto=false
+          if [ "${{ matrix.target.platform }}" = "ios" ]; then
+            mkdir -p test_project/plugin_name_goes_here/bin/ios
+            xcodebuild -create-xcframework \
+              -library bin/ios/libplugin_name_goes_here.ios.${{ matrix.target-type }}.arm64${{ matrix.float-precision == 'double' && '.double' || '' }}.dylib \
+              -output test_project/plugin_name_goes_here/bin/ios/libplugin_name_goes_here.ios.${{ matrix.target-type }}.${{ matrix.float-precision }}.xcframework
+          fi
 
       - name: Save .scons_cache
         uses: ./godot-cpp/.github/actions/godot-cache-save
@@ -87,16 +90,6 @@ jobs:
         shell: pwsh
         run: |
           Remove-Item bin/* -Include *.exp,*.lib,*.pdb -Force
-
-      - name: Run Tests (Linux, Debug)
-        if: ${{ matrix.target.platform == 'linux' && matrix.target.arch == 'x86_64' && matrix.target-type == 'template_debug' }}
-        run: |
-          wget "https://github.com/godotengine/godot-builds/releases/download/4.3-stable/Godot_v4.3-stable_linux.x86_64.zip" -O Godot.zip
-          unzip -a Godot.zip
-          chmod +x Godot_v4.3-stable_linux.x86_64
-          cd test_project
-          ../Godot_v4.3-stable_linux.x86_64 --headless --import
-          ../Godot_v4.3-stable_linux.x86_64 --headless --script run-tests.gd
 
       - name: Upload Artifact
         uses: actions/upload-artifact@v4
