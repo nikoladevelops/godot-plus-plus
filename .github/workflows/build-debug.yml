@@ -1,7 +1,7 @@
 name: Build GDExtension (Debug)
 on:
   workflow_dispatch:  # Run only via manual trigger in GitHub UI
-  workflow_call:     # Keep for potential future use
+  workflow_call:
 
 jobs:
   build:
@@ -60,19 +60,19 @@ jobs:
         if: ${{ matrix.target.platform == 'macos' || matrix.target.platform == 'ios' }}
         run: |
           cd godot-cpp
-          scons platform=${{ matrix.target.platform }} arch=x86_64 target=${{ matrix.target-type }} precision=${{ matrix.float-precision }} threads_enabled=${{ matrix.target.threads == 'enabled' && 'true' || 'false' }}
-          scons platform=${{ matrix.target.platform }} arch=arm64 target=${{ matrix.target-type }} precision=${{ matrix.float-precision }} threads_enabled=${{ matrix.target.threads == 'enabled' && 'true' || 'false' }}
+          scons platform=${{ matrix.target.platform }} arch=x86_64 target=${{ matrix.target-type }} precision=${{ matrix.float-precision }} threads=${{ matrix.target.threads == 'enabled' && 'true' || 'false' }} use_lto=false
+          scons platform=${{ matrix.target.platform }} arch=arm64 target=${{ matrix.target-type }} precision=${{ matrix.float-precision }} threads=${{ matrix.target.threads == 'enabled' && 'true' || 'false' }} use_lto=false
           if [ "${{ matrix.target.platform }}" = "macos" ]; then
-            mkdir -p bin/libgodot-cpp.macos.template_${{ matrix.target-type }}.framework
-            lipo -create bin/libgodot-cpp.macos.template_${{ matrix.target-type }}.x86_64.a bin/libgodot-cpp.macos.template_${{ matrix.target-type }}.arm64.a -output bin/libgodot-cpp.macos.template_${{ matrix.target-type }}.framework/libgodot-cpp
-            cp -r misc/macos/Info.plist bin/libgodot-cpp.macos.template_${{ matrix.target-type }}.framework/Info.plist
-            mv bin/libgodot-cpp.macos.template_${{ matrix.target-type }}.framework ../bin/macos/
+            mkdir -p bin/libgodot-cpp.macos.${{ matrix.target-type }}.framework
+            lipo -create bin/libgodot-cpp.macos.${{ matrix.target-type }}.x86_64.a bin/libgodot-cpp.macos.${{ matrix.target-type }}.arm64.a -output bin/libgodot-cpp.macos.${{ matrix.target-type }}.framework/libgodot-cpp
+            cp -r misc/macos/Info.plist bin/libgodot-cpp.macos.${{ matrix.target-type }}.framework/Info.plist
+            mv bin/libgodot-cpp.macos.${{ matrix.target-type }}.framework ../bin/macos/
           else
             xcodebuild -create-xcframework \
-              -library bin/libgodot-cpp.ios.template_${{ matrix.target-type }}.arm64.a \
-              -library bin/libgodot-cpp.ios.template_${{ matrix.target-type }}.x86_64.a \
-              -output bin/libgodot-cpp.ios.template_${{ matrix.target-type }}.xcframework
-            mv bin/libgodot-cpp.ios.template_${{ matrix.target-type }}.xcframework ../bin/ios/
+              -library bin/libgodot-cpp.ios.${{ matrix.target-type }}.arm64.a \
+              -library bin/libgodot-cpp.ios.${{ matrix.target-type }}.x86_64.a \
+              -output bin/libgodot-cpp.ios.${{ matrix.target-type }}.xcframework
+            mv bin/libgodot-cpp.ios.${{ matrix.target-type }}.xcframework ../bin/ios/
           fi
 
       - name: Build GDExtension
@@ -80,7 +80,7 @@ jobs:
         env:
           SCONS_CACHE: ${{ github.workspace }}/.scons-cache/
         run: |
-          scons target=${{ matrix.target-type }} platform=${{ matrix.target.platform }} arch=${{ matrix.target.arch }} precision=${{ matrix.float-precision }} threads_enabled=${{ matrix.target.threads == 'enabled' && 'true' || 'false' }} threads=${{ matrix.target.threads || 'disabled' }} lto=none
+          scons target=${{ matrix.target-type }} platform=${{ matrix.target.platform }} arch=${{ matrix.target.arch }} precision=${{ matrix.float-precision }} threads=${{ matrix.target.threads }} use_lto=false
 
       - name: Save .scons_cache
         uses: ./godot-cpp/.github/actions/godot-cache-save
