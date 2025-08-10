@@ -3,8 +3,12 @@ on:
   workflow_dispatch:
   workflow_call:
 
+env:
+  TARGET_TYPE: template_debug
+
 jobs:
-  build:
+  build-other-platforms-debug:
+    name: Build Debug - Other Platforms
     strategy:
       fail-fast: false
       matrix:
@@ -16,15 +20,12 @@ jobs:
           - { platform: windows, arch: x86_32, os: windows-latest }
           - { platform: windows, arch: x86_64, os: windows-latest }
           - { platform: windows, arch: arm64, os: windows-latest }
-          - { platform: macos, arch: universal, os: macos-latest }
           - { platform: android, arch: x86_64, os: ubuntu-22.04 }
           - { platform: android, arch: arm32, os: ubuntu-22.04 }
           - { platform: android, arch: arm64, os: ubuntu-22.04 }
-          - { platform: ios, arch: arm64, os: macos-latest }
           - { platform: web, arch: wasm32, os: ubuntu-22.04, threads: enabled }
           - { platform: web, arch: wasm32, os: ubuntu-22.04, threads: disabled }
         float-precision: [single, double]
-        target-type: [template_debug]
 
     runs-on: ${{ matrix.target.os }}
     steps:
@@ -33,10 +34,14 @@ jobs:
         with:
           submodules: true
 
+      - name: Read libname from SConstruct
+        run: |
+          LIBNAME=$(grep '^libname' SConstruct | cut -d'"' -f2)
+          echo "LIBNAME=$LIBNAME" >> $GITHUB_ENV
+
       - name: Install multilib support
         if: ${{ matrix.target.platform == 'linux' && matrix.target.arch == 'x86_32' }}
-        run: |
-          sudo apt-get update && sudo apt-get install -y gcc-multilib g++-multilib
+        run: sudo apt-get update && sudo apt-get install -y gcc-multilib g++-multilib
 
       - name: Setup godot-cpp
         uses: ./godot-cpp/.github/actions/setup-godot-cpp
@@ -48,65 +53,143 @@ jobs:
         uses: ./godot-cpp/.github/actions/godot-cache-restore
         with:
           scons-cache: ${{ github.workspace }}/.scons-cache/
-          cache-name: ${{ matrix.target.platform }}_${{ matrix.target.arch }}_${{ matrix.float-precision }}_${{ matrix.target-type }}
+          cache-name: debug_${{ matrix.target.platform }}_${{ matrix.target.arch }}_${{ matrix.float-precision }}_${{ env.TARGET_TYPE }}
 
-      - name: Build godot-cpp for macOS/iOS
-        if: ${{ matrix.target.platform == 'macos' || matrix.target.platform == 'ios' }}
-        run: |
-          cd godot-cpp
-          mkdir -p bin/macos bin/ios
-          if [ "${{ matrix.target.platform }}" = "macos" ]; then
-            scons platform=${{ matrix.target.platform }} arch=x86_64 target=${{ matrix.target-type }} precision=${{ matrix.float-precision }} threads=${{ matrix.target.threads == 'enabled' && 'true' || 'false' }} use_lto=false
-            scons platform=${{ matrix.target.platform }} arch=arm64 target=${{ matrix.target-type }} precision=${{ matrix.float-precision }} threads=${{ matrix.target.threads == 'enabled' && 'true' || 'false' }} use_lto=false
-            mkdir -p bin/libgodot-cpp.macos.${{ matrix.target-type }}.${{ matrix.float-precision }}.framework
-            lipo -create bin/libgodot-cpp.macos.${{ matrix.target-type }}.x86_64.a bin/libgodot-cpp.macos.${{ matrix.target-type }}.arm64.a -output bin/libgodot-cpp.macos.${{ matrix.target-type }}.${{ matrix.float-precision }}.framework/libgodot-cpp
-            mv bin/libgodot-cpp.macos.${{ matrix.target-type }}.${{ matrix.float-precision }}.framework ../bin/macos/
-          else
-            scons platform=${{ matrix.target.platform }} arch=arm64 target=${{ matrix.target-type }} precision=${{ matrix.float-precision }} threads=${{ matrix.target.threads == 'enabled' && 'true' || 'false' }}
-            mv bin/libgodot-cpp.ios.${{ matrix.target-type }}.arm64.a ../bin/ios/
-          fi
-
-      - name: Build GDExtension
+      - name: Build GDExtension (Debug)
         shell: sh
         env:
           SCONS_CACHE: ${{ github.workspace }}/.scons-cache/
         run: |
-          scons target=${{ matrix.target-type }} platform=${{ matrix.target.platform }} arch=${{ matrix.target.arch }} precision=${{ matrix.float-precision }} threads=${{ matrix.target.threads == 'enabled' && 'true' || 'false' }} use_lto=false
-          if [ "${{ matrix.target.platform }}" = "ios" ]; then
-            mkdir -p test_project/plugin_name_goes_here/bin/ios
-            xcodebuild -create-xcframework \
-              -library bin/ios/libplugin_name_goes_here.ios.${{ matrix.target-type }}.arm64${{ matrix.float-precision == 'double' && '.double' || '' }}.dylib \
-              -output test_project/plugin_name_goes_here/bin/ios/libplugin_name_goes_here.ios.${{ matrix.target-type }}.${{ matrix.float-precision }}.xcframework
-          fi
+          mkdir -p bin/${{ matrix.target.platform }}
+          THREAD_SUFFIX=${{ matrix.target.threads == 'enabled' && 'threads' || 'nothreads' }}
+          EXT=""
+          case "${{ matrix.target.platform }}" in
+            windows) EXT=".dll" ;;
+            linux|android) EXT=".so" ;;
+            web) EXT=".wasm" ;;
+          esac
+          scons target=${{ env.TARGET_TYPE }} platform=${{ matrix.target.platform }} arch=${{ matrix.target.arch }} precision=${{ matrix.float-precision }} threads=${{ matrix.target.threads == 'enabled' && 'true' || 'false' }} use_lto=false
+          OUTFILE="bin/${{ matrix.target.platform }}/${LIBNAME}.${{ matrix.target.platform }}.${{ env.TARGET_TYPE }}.${{ matrix.float-precision }}${{ matrix.target.platform == 'web' && '.' || '' }}${{ matrix.target.platform == 'web' && THREAD_SUFFIX || '' }}$EXT"
+          mv bin/*$EXT "$OUTFILE"
 
       - name: Save .scons_cache
         uses: ./godot-cpp/.github/actions/godot-cache-save
         with:
           scons-cache: ${{ github.workspace }}/.scons-cache/
-          cache-name: ${{ matrix.target.platform }}_${{ matrix.target.arch }}_${{ matrix.float-precision }}_${{ matrix.target-type }}
-
-      - name: Windows - Delete compilation files
-        if: ${{ matrix.target.platform == 'windows' }}
-        shell: pwsh
-        run: |
-          Remove-Item bin/* -Include *.exp,*.lib,*.pdb -Force
+          cache-name: debug_${{ matrix.target.platform }}_${{ matrix.target.arch }}_${{ matrix.float-precision }}_${{ env.TARGET_TYPE }}
 
       - name: Upload Artifact
         uses: actions/upload-artifact@v4
         with:
-          name: godot-plus-plus-${{ matrix.target.platform }}-${{ matrix.target.arch }}-${{ matrix.float-precision }}-${{ matrix.target-type }}${{ matrix.target.threads != '' && format('-{0}', matrix.target.threads) || '' }}
-          path: |
-            ${{ github.workspace }}/bin/**
-            ${{ github.workspace }}/test_project/**
-            !${{ github.workspace }}/bin/**/libgodot-cpp*.a
+          name: godot-plus-plus-debug-${{ matrix.target.platform }}-${{ matrix.target.arch }}-${{ matrix.float-precision }}
+          path: bin/${{ matrix.target.platform }}/**
 
-  merge:
+  build-macos-debug:
+    name: Build Debug - macOS
+    needs: build-other-platforms-debug
+    runs-on: macos-latest
+    strategy:
+      fail-fast: false
+      matrix:
+        float-precision: [single, double]
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+        with:
+          submodules: true
+
+      - name: Read libname from SConstruct
+        run: |
+          LIBNAME=$(grep '^libname' SConstruct | cut -d'"' -f2)
+          echo "LIBNAME=$LIBNAME" >> $GITHUB_ENV
+
+      - name: Setup godot-cpp
+        uses: ./godot-cpp/.github/actions/setup-godot-cpp
+        with:
+          platform: macos
+          em-version: 3.1.62
+
+      - name: Restore .scons_cache
+        uses: ./godot-cpp/.github/actions/godot-cache-restore
+        with:
+          scons-cache: ${{ github.workspace }}/.scons-cache/
+          cache-name: debug_macos_universal_${{ matrix.float-precision }}_${{ env.TARGET_TYPE }}
+
+      - name: Build godot-cpp for macOS (Debug)
+        run: |
+          cd godot-cpp
+          scons platform=macos arch=x86_64 target=${{ env.TARGET_TYPE }} precision=${{ matrix.float-precision }} threads=false use_lto=false
+          scons platform=macos arch=arm64 target=${{ env.TARGET_TYPE }} precision=${{ matrix.float-precision }} threads=false use_lto=false
+          mkdir -p ../bin/macos
+          mkdir -p libtmp.framework
+          lipo -create bin/libgodot-cpp.macos.${{ env.TARGET_TYPE }}.x86_64.a bin/libgodot-cpp.macos.${{ env.TARGET_TYPE }}.arm64.a -output libtmp.framework/libgodot-cpp
+          mv libtmp.framework ../bin/macos/lib${LIBNAME}.macos.${{ env.TARGET_TYPE }}.${{ matrix.float-precision }}.framework
+
+      - name: Save .scons_cache
+        uses: ./godot-cpp/.github/actions/godot-cache-save
+        with:
+          scons-cache: ${{ github.workspace }}/.scons-cache/
+          cache-name: debug_macos_universal_${{ matrix.float-precision }}_${{ env.TARGET_TYPE }}
+
+      - name: Upload Artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: godot-plus-plus-debug-macos-${{ matrix.float-precision }}
+          path: bin/macos/**
+
+  build-ios-debug:
+    name: Build Debug - iOS
+    needs: build-macos-debug
+    runs-on: macos-latest
+    strategy:
+      fail-fast: false
+      matrix:
+        float-precision: [single, double]
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+        with:
+          submodules: true
+
+      - name: Read libname from SConstruct
+        run: |
+          LIBNAME=$(grep '^libname' SConstruct | cut -d'"' -f2)
+          echo "LIBNAME=$LIBNAME" >> $GITHUB_ENV
+
+      - name: Setup godot-cpp
+        uses: ./godot-cpp/.github/actions/setup-godot-cpp
+        with:
+          platform: ios
+          em-version: 3.1.62
+
+      - name: Restore .scons_cache (from macOS build)
+        uses: ./godot-cpp/.github/actions/godot-cache-restore
+        with:
+          scons-cache: ${{ github.workspace }}/.scons-cache/
+          cache-name: debug_macos_universal_${{ matrix.float-precision }}_${{ env.TARGET_TYPE }}
+
+      - name: Build GDExtension for iOS (Debug)
+        run: |
+          mkdir -p bin/ios
+          scons target=${{ env.TARGET_TYPE }} platform=ios arch=arm64 precision=${{ matrix.float-precision }} threads=false use_lto=false
+          xcodebuild -create-xcframework \
+            -library bin/ios/lib${LIBNAME}.ios.${{ env.TARGET_TYPE }}.arm64${{ matrix.float-precision == 'double' && '.double' || '' }}.dylib \
+            -output bin/ios/lib${LIBNAME}.ios.${{ env.TARGET_TYPE }}.${{ matrix.float-precision }}.xcframework
+
+      - name: Upload Artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: godot-plus-plus-debug-ios-${{ matrix.float-precision }}
+          path: bin/ios/**
+
+  merge-debug:
+    name: Merge Debug Artifacts
     runs-on: ubuntu-22.04
-    needs: build
+    needs: [build-other-platforms-debug, build-macos-debug, build-ios-debug]
     steps:
       - name: Merge Artifacts
         uses: actions/upload-artifact/merge@v4
         with:
           name: godot-plus-plus-debug
-          pattern: godot-plus-plus-*
+          pattern: godot-plus-plus-debug-*
           delete-merged: true
