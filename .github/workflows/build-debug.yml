@@ -1,143 +1,117 @@
-name: Build GDExtension Debug
-
+name: Build GDExtension (Debug)
 on:
-  push:
-  pull_request:
-
-env:
-  TARGET_TYPE: template_debug
-  SCONS_CACHE: ${{ github.workspace }}/.scons-cache/
+  workflow_dispatch:
+  workflow_call:
 
 jobs:
-  # Job for all non-macOS/iOS targets
-  build-other-platforms:
+  build:
     strategy:
       fail-fast: false
       matrix:
         target:
-          - { platform: linux, arch: x86_32, os: ubuntu-22.04, float: single }
-          - { platform: linux, arch: x86_32, os: ubuntu-22.04, float: double }
-          - { platform: linux, arch: x86_64, os: ubuntu-22.04, float: single }
-          - { platform: linux, arch: x86_64, os: ubuntu-22.04, float: double }
-          - { platform: linux, arch: arm32, os: ubuntu-22.04, float: single }
-          - { platform: linux, arch: arm32, os: ubuntu-22.04, float: double }
-          - { platform: linux, arch: arm64, os: ubuntu-22.04, float: single }
-          - { platform: linux, arch: arm64, os: ubuntu-22.04, float: double }
-          - { platform: windows, arch: x86_32, os: windows-latest, float: single }
-          - { platform: windows, arch: x86_32, os: windows-latest, float: double }
-          - { platform: windows, arch: x86_64, os: windows-latest, float: single }
-          - { platform: windows, arch: x86_64, os: windows-latest, float: double }
-          - { platform: android, arch: x86_64, os: ubuntu-22.04, float: single }
-          - { platform: android, arch: x86_64, os: ubuntu-22.04, float: double }
-          - { platform: android, arch: arm32, os: ubuntu-22.04, float: single }
-          - { platform: android, arch: arm32, os: ubuntu-22.04, float: double }
-          - { platform: android, arch: arm64, os: ubuntu-22.04, float: single }
-          - { platform: android, arch: arm64, os: ubuntu-22.04, float: double }
-          - { platform: web, arch: wasm32, os: ubuntu-22.04, float: single, threads: enabled }
-          - { platform: web, arch: wasm32, os: ubuntu-22.04, float: double, threads: enabled }
-          - { platform: web, arch: wasm32, os: ubuntu-22.04, float: single, threads: disabled }
-          - { platform: web, arch: wasm32, os: ubuntu-22.04, float: double, threads: disabled }
+          - { platform: linux, arch: x86_32, os: ubuntu-22.04 }
+          - { platform: linux, arch: x86_64, os: ubuntu-22.04 }
+          - { platform: linux, arch: arm32, os: ubuntu-22.04-arm }
+          - { platform: linux, arch: arm64, os: ubuntu-22.04-arm }
+          - { platform: windows, arch: x86_32, os: windows-latest }
+          - { platform: windows, arch: x86_64, os: windows-latest }
+          - { platform: windows, arch: arm64, os: windows-latest }
+          - { platform: macos, arch: universal, os: macos-latest }
+          - { platform: android, arch: x86_64, os: ubuntu-22.04 }
+          - { platform: android, arch: arm32, os: ubuntu-22.04 }
+          - { platform: android, arch: arm64, os: ubuntu-22.04 }
+          - { platform: ios, arch: arm64, os: macos-latest }
+          - { platform: web, arch: wasm32, os: ubuntu-22.04, threads: enabled }
+          - { platform: web, arch: wasm32, os: ubuntu-22.04, threads: disabled }
+        float-precision: [single, double]
+        target-type: [template_debug]
+
     runs-on: ${{ matrix.target.os }}
     steps:
-      - uses: actions/checkout@v4
-
-      - name: Read libname from SConstruct
-        run: |
-          LIBNAME=$(grep '^libname' SConstruct | cut -d'"' -f2)
-          echo "LIBNAME=$LIBNAME" >> $GITHUB_ENV
-
-      - name: Cache SCons build
-        uses: actions/cache@v4
+      - name: Checkout
+        uses: actions/checkout@v4
         with:
-          path: ${{ env.SCONS_CACHE }}
-          key: ${{ runner.os }}-${{ matrix.target.platform }}-${{ matrix.target.arch }}-${{ matrix.target.float }}-${{ env.TARGET_TYPE }}
+          submodules: true
 
-      - name: Build GDExtension (Debug)
-        shell: bash
+      - name: Install multilib support
+        if: ${{ matrix.target.platform == 'linux' && matrix.target.arch == 'x86_32' }}
         run: |
-          mkdir -p bin/${{ matrix.target.platform }}
+          sudo apt-get update && sudo apt-get install -y gcc-multilib g++-multilib
 
-          EXT=""
-          case "${{ matrix.target.platform }}" in
-            windows) EXT=".dll" ;;
-            linux|android) EXT=".so" ;;
-            web) EXT=".wasm" ;;
-          esac
+      - name: Setup godot-cpp
+        uses: ./godot-cpp/.github/actions/setup-godot-cpp
+        with:
+          platform: ${{ matrix.target.platform }}
+          em-version: 3.1.62
 
-          THREAD_SUFFIX=""
-          THREADS_ARG="false"
-          if [ "${{ matrix.target.platform }}" = "web" ]; then
-            if [ "${{ matrix.target.threads }}" = "enabled" ]; then
-              THREAD_SUFFIX=".threads"
-              THREADS_ARG="true"
-            else
-              THREAD_SUFFIX=".nothreads"
-              THREADS_ARG="false"
-            fi
+      - name: Restore .scons_cache
+        uses: ./godot-cpp/.github/actions/godot-cache-restore
+        with:
+          scons-cache: ${{ github.workspace }}/.scons-cache/
+          cache-name: ${{ matrix.target.platform }}_${{ matrix.target.arch }}_${{ matrix.float-precision }}_${{ matrix.target-type }}
+
+      # macOS build step (only runs for macOS)
+      - name: Build godot-cpp for macOS
+        if: ${{ matrix.target.platform == 'macos' }}
+        run: |
+          cd godot-cpp
+          mkdir -p bin/macos
+          scons platform=macos arch=x86_64 target=${{ matrix.target-type }} precision=${{ matrix.float-precision }} threads=${{ matrix.target.threads == 'enabled' && 'true' || 'false' }} use_lto=false
+          scons platform=macos arch=arm64 target=${{ matrix.target-type }} precision=${{ matrix.float-precision }} threads=${{ matrix.target.threads == 'enabled' && 'true' || 'false' }} use_lto=false
+          mkdir -p bin/libgodot-cpp.macos.${{ matrix.target-type }}.${{ matrix.float-precision }}.framework
+          lipo -create bin/libgodot-cpp.macos.${{ matrix.target-type }}.x86_64.a bin/libgodot-cpp.macos.${{ matrix.target-type }}.arm64.a -output bin/libgodot-cpp.macos.${{ matrix.target-type }}.${{ matrix.float-precision }}.framework/libgodot-cpp
+          mv bin/libgodot-cpp.macos.${{ matrix.target-type }}.${{ matrix.float-precision }}.framework ../bin/macos/
+
+      # iOS build step (only runs for iOS)
+      - name: Build godot-cpp for iOS
+        if: ${{ matrix.target.platform == 'ios' }}
+        run: |
+          cd godot-cpp
+          mkdir -p bin/ios
+          scons platform=ios arch=arm64 target=${{ matrix.target-type }} precision=${{ matrix.float-precision }} threads=${{ matrix.target.threads == 'enabled' && 'true' || 'false' }}
+          mv bin/libgodot-cpp.ios.${{ matrix.target-type }}.arm64.a ../bin/ios/
+
+      - name: Build GDExtension
+        shell: sh
+        env:
+          SCONS_CACHE: ${{ github.workspace }}/.scons-cache/
+        run: |
+          scons target=${{ matrix.target-type }} platform=${{ matrix.target.platform }} arch=${{ matrix.target.arch }} precision=${{ matrix.float-precision }} threads=${{ matrix.target.threads == 'enabled' && 'true' || 'false' }} use_lto=false
+          if [ "${{ matrix.target.platform }}" = "ios" ]; then
+            mkdir -p test_project/plugin_name_goes_here/bin/ios
+            xcodebuild -create-xcframework \
+              -library bin/ios/libplugin_name_goes_here.ios.${{ matrix.target-type }}.arm64${{ matrix.float-precision == 'double' && '.double' || '' }}.dylib \
+              -output test_project/plugin_name_goes_here/bin/ios/libplugin_name_goes_here.ios.${{ matrix.target-type }}.${{ matrix.float-precision }}.xcframework
           fi
 
-          scons target=${{ env.TARGET_TYPE }} \
-                platform=${{ matrix.target.platform }} \
-                arch=${{ matrix.target.arch }} \
-                precision=${{ matrix.target.float }} \
-                threads=$THREADS_ARG use_lto=false
-
-          OUTFILE="bin/${{ matrix.target.platform }}/${LIBNAME}.${{ matrix.target.platform }}.${{ env.TARGET_TYPE }}.${{ matrix.target.float }}${THREAD_SUFFIX}${EXT}"
-          mv bin/*$EXT "$OUTFILE"
-
-  # macOS job
-  build-macos:
-    runs-on: macos-latest
-    steps:
-      - uses: actions/checkout@v4
-
-      - name: Read libname from SConstruct
-        run: |
-          LIBNAME=$(grep '^libname' SConstruct | cut -d'"' -f2)
-          echo "LIBNAME=$LIBNAME" >> $GITHUB_ENV
-
-      - name: Cache SCons build
-        uses: actions/cache@v4
+      - name: Save .scons_cache
+        uses: ./godot-cpp/.github/actions/godot-cache-save
         with:
-          path: ${{ env.SCONS_CACHE }}
-          key: macos-${{ env.TARGET_TYPE }}
+          scons-cache: ${{ github.workspace }}/.scons-cache/
+          cache-name: ${{ matrix.target.platform }}_${{ matrix.target.arch }}_${{ matrix.float-precision }}_${{ matrix.target-type }}
 
-      - name: Build macOS single precision
+      - name: Windows - Delete compilation files
+        if: ${{ matrix.target.platform == 'windows' }}
+        shell: pwsh
         run: |
-          mkdir -p bin/macos
-          scons target=${{ env.TARGET_TYPE }} platform=macos arch=universal precision=single use_lto=false
-          mv bin/*.framework "bin/macos/lib${LIBNAME}.macos.${{ env.TARGET_TYPE }}.single.framework"
+          Remove-Item bin/* -Include *.exp,*.lib,*.pdb -Force
 
-      - name: Build macOS double precision
-        run: |
-          scons target=${{ env.TARGET_TYPE }} platform=macos arch=universal precision=double use_lto=false
-          mv bin/*.framework "bin/macos/lib${LIBNAME}.macos.${{ env.TARGET_TYPE }}.double.framework"
-
-  # iOS job (depends on macOS)
-  build-ios:
-    runs-on: macos-latest
-    needs: build-macos
-    steps:
-      - uses: actions/checkout@v4
-
-      - name: Read libname from SConstruct
-        run: |
-          LIBNAME=$(grep '^libname' SConstruct | cut -d'"' -f2)
-          echo "LIBNAME=$LIBNAME" >> $GITHUB_ENV
-
-      - name: Cache SCons build
-        uses: actions/cache@v4
+      - name: Upload Artifact
+        uses: actions/upload-artifact@v4
         with:
-          path: ${{ env.SCONS_CACHE }}
-          key: ios-${{ env.TARGET_TYPE }}
+          name: godot-plus-plus-${{ matrix.target.platform }}-${{ matrix.target.arch }}-${{ matrix.float-precision }}-${{ matrix.target-type }}${{ matrix.target.threads != '' && format('-{0}', matrix.target.threads) || '' }}
+          path: |
+            ${{ github.workspace }}/bin/**
+            ${{ github.workspace }}/test_project/**
+            !${{ github.workspace }}/bin/**/libgodot-cpp*.a
 
-      - name: Build iOS single precision
-        run: |
-          mkdir -p bin/ios
-          scons target=${{ env.TARGET_TYPE }} platform=ios arch=arm64 precision=single use_lto=false
-          mv bin/*.xcframework "bin/ios/lib${LIBNAME}.ios.${{ env.TARGET_TYPE }}.single.xcframework"
-
-      - name: Build iOS double precision
-        run: |
-          scons target=${{ env.TARGET_TYPE }} platform=ios arch=arm64 precision=double use_lto=false
-          mv bin/*.xcframework "bin/ios/lib${LIBNAME}.ios.${{ env.TARGET_TYPE }}.double.xcframework"
+  merge:
+    runs-on: ubuntu-22.04
+    needs: build
+    steps:
+      - name: Merge Artifacts
+        uses: actions/upload-artifact/merge@v4
+        with:
+          name: godot-plus-plus-debug
+          pattern: godot-plus-plus-*
+          delete-merged: true
