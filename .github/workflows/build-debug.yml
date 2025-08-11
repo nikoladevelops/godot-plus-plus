@@ -93,7 +93,7 @@ jobs:
       - name: Upload Artifact
         uses: actions/upload-artifact@v4
         with:
-          name: godot-cpp-template-${{ matrix.target.platform }}-${{ matrix.target.arch }}-${{ matrix.float-precision }}-${{ matrix.target-type }}
+          name: godot-cpp-template-${{ matrix.target.platform }}-${{ matrix.target.arch }}-${{ matrix.float-precision }}-${{ matrix.target-type }}-${{ (matrix.target.threads != null && matrix.target.threads != '') && format('{0}', matrix.target.threads) || '' }}
           path: |
             ${{ github.workspace }}/bin/**
 
