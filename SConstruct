@@ -80,10 +80,23 @@ if env.get("target") in ["editor", "template_debug"]:
         print("Not including class reference as we're targeting a pre-4.3 baseline.")
 
 # Determine suffixes based on env (align with godot-cpp conventions)
-precision_suffix = '.double' if env.get('precision') == 'double' else ''
-threads_suffix = '.threads' if env.get('threads') in ['yes', 'true'] else '.nothreads'
-arch_suffix = f".{env['arch']}" if env['arch'] and env['arch'] != 'universal' else ''
-suffix = f".{env['target']}{precision_suffix}{arch_suffix}{threads_suffix}"
+arch_suffix = f".{env['arch']}"
+
+if env['arch'] == 'universal':
+    arch_suffix = ''  # No suffix for universal builds  (mac and ios basically use this)
+
+# Suffix example: .windows.template_debug.x86_64
+suffix = f".{env['platform']}.{env['target']}{arch_suffix}"
+
+# Append .double if precision is set to double. WARNING - If you use double precision, you need to update your .gdextension file to use the correct suffix
+if env.get('precision') == 'double':
+    suffix = f"{suffix}.double"
+
+# Append .threads if threads are enabled (for web builds)
+if env['platform'] == 'web' and env.get('threads') in ['yes', 'true']:
+    suffix = f"{suffix}.threads"
+
+
 lib_filename = f"{env.subst('$SHLIBPREFIX')}{libname}{suffix}{env.subst('$SHLIBSUFFIX')}"
 
 # Generate Info.plist content for macOS and iOS

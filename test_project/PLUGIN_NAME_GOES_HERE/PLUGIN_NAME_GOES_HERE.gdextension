@@ -4,81 +4,57 @@ compatibility_minimum = "4.4"
 
 [libraries]
 ; Relative paths ensure that our GDExtension can be placed anywhere in the project directory.
-macos.single.debug = "./bin/macos/libplugin_name_goes_here.macos.template_debug.single.framework"
-macos.double.debug = "./bin/macos/libplugin_name_goes_here.macos.template_debug.double.framework"
-macos.single.release = "./bin/macos/libplugin_name_goes_here.macos.template_release.single.framework"
-macos.double.release = "./bin/macos/libplugin_name_goes_here.macos.template_release.double.framework"
+macos.debug = "./bin/macos/libplugin_name_goes_here.macos.template_debug.single.framework"
+macos.release = "./bin/macos/libplugin_name_goes_here.macos.template_release.single.framework"
 
-ios.arm64.single.debug = "./bin/ios/libplugin_name_goes_here.ios.template_debug.single.xcframework"
-ios.arm64.double.debug = "./bin/ios/libplugin_name_goes_here.ios.template_debug.double.xcframework"
-ios.arm64.single.release = "./bin/ios/libplugin_name_goes_here.ios.template_release.single.xcframework"
-ios.arm64.double.release = "./bin/ios/libplugin_name_goes_here.ios.template_release.double.xcframework"
 
-windows.x86_32.single.debug = "./bin/windows/plugin_name_goes_here.windows.template_debug.x86_32.dll"
-windows.x86_32.double.debug = "./bin/windows/plugin_name_goes_here.windows.template_debug.x86_32.double.dll"
-windows.x86_32.single.release = "./bin/windows/plugin_name_goes_here.windows.template_release.x86_32.dll"
-windows.x86_32.double.release = "./bin/windows/plugin_name_goes_here.windows.template_release.x86_32.double.dll"
+ios.debug = "./bin/ios/libplugin_name_goes_here.ios.template_debug.single.xcframework"
+ios.release = "./bin/ios/libplugin_name_goes_here.ios.template_release.single.xcframework"
 
-windows.x86_64.single.debug = "./bin/windows/plugin_name_goes_here.windows.template_debug.x86_64.dll"
-windows.x86_64.double.debug = "./bin/windows/plugin_name_goes_here.windows.template_debug.x86_64.double.dll"
-windows.x86_64.single.release = "./bin/windows/plugin_name_goes_here.windows.template_release.x86_64.dll"
-windows.x86_64.double.release = "./bin/windows/plugin_name_goes_here.windows.template_release.x86_64.double.dll"
 
-linux.x86_32.single.debug = "./bin/linux/libplugin_name_goes_here.linux.template_debug.x86_32.so"
-linux.x86_32.double.debug = "./bin/linux/libplugin_name_goes_here.linux.template_debug.x86_32.double.so"
-linux.x86_32.single.release = "./bin/linux/libplugin_name_goes_here.linux.template_release.x86_32.so"
-linux.x86_32.double.release = "./bin/linux/libplugin_name_goes_here.linux.template_release.x86_32.double.so"
+windows.debug.x86_32 = "./bin/windows/plugin_name_goes_here.windows.template_debug.x86_32.dll"
+windows.release.x86_32 = "./bin/windows/plugin_name_goes_here.windows.template_release.x86_32.dll"
 
-linux.x86_64.single.debug = "./bin/linux/libplugin_name_goes_here.linux.template_debug.x86_64.so"
-linux.x86_64.double.debug = "./bin/linux/libplugin_name_goes_here.linux.template_debug.x86_64.double.so"
-linux.x86_64.single.release = "./bin/linux/libplugin_name_goes_here.linux.template_release.x86_64.so"
-linux.x86_64.double.release = "./bin/linux/libplugin_name_goes_here.linux.template_release.x86_64.double.so"
+windows.debug.x86_64 = "./bin/windows/plugin_name_goes_here.windows.template_debug.x86_64.dll"
+windows.release.x86_64 = "./bin/windows/plugin_name_goes_here.windows.template_release.x86_64.dll"
 
-linux.arm32.single.debug = "./bin/linux/libplugin_name_goes_here.linux.template_debug.arm32.so"
-linux.arm32.double.debug = "./bin/linux/libplugin_name_goes_here.linux.template_debug.arm32.double.so"
-linux.arm32.single.release = "./bin/linux/libplugin_name_goes_here.linux.template_release.arm32.so"
-linux.arm32.double.release = "./bin/linux/libplugin_name_goes_here.linux.template_release.arm32.double.so"
+windows.debug.arm64 = "./bin/windows/plugin_name_goes_here.windows.template_debug.arm64.dll"
+windows.release.arm64 = "./bin/windows/plugin_name_goes_here.windows.template_release.arm64.dll"
 
-linux.arm64.single.debug = "./bin/linux/libplugin_name_goes_here.linux.template_debug.arm64.so"
-linux.arm64.double.debug = "./bin/linux/libplugin_name_goes_here.linux.template_debug.arm64.double.so"
-linux.arm64.single.release = "./bin/linux/libplugin_name_goes_here.linux.template_release.arm64.so"
-linux.arm64.double.release = "./bin/linux/libplugin_name_goes_here.linux.template_release.arm64.double.so"
 
-android.x86_64.single.debug = "./bin/android/libplugin_name_goes_here.android.template_debug.x86_64.so"
-android.x86_64.double.debug = "./bin/android/libplugin_name_goes_here.android.template_debug.x86_64.double.so"
-android.x86_64.single.release = "./bin/android/libplugin_name_goes_here.android.template_release.x86_64.so"
-android.x86_64.double.release = "./bin/android/libplugin_name_goes_here.android.template_release.x86_64.double.so"
+linux.debug.x86_32 = "./bin/linux/libplugin_name_goes_here.linux.template_debug.x86_32.so"
+linux.release.x86_32 = "./bin/linux/libplugin_name_goes_here.linux.template_release.x86_32.so"
 
-android.arm32.single.debug = "./bin/android/libplugin_name_goes_here.android.template_debug.arm32.so"
-android.arm32.double.debug = "./bin/android/libplugin_name_goes_here.android.template_debug.arm32.double.so"
-android.arm32.single.release = "./bin/android/libplugin_name_goes_here.android.template_release.arm32.so"
-android.arm32.double.release = "./bin/android/libplugin_name_goes_here.android.template_release.arm32.double.so"
+linux.debug.x86_64 = "./bin/linux/libplugin_name_goes_here.linux.template_debug.x86_64.so"
+linux.release.x86_64 = "./bin/linux/libplugin_name_goes_here.linux.template_release.x86_64.so"
 
-android.arm64.single.debug = "./bin/android/libplugin_name_goes_here.android.template_debug.arm64.so"
-android.arm64.double.debug = "./bin/android/libplugin_name_goes_here.android.template_debug.arm64.double.so"
-android.arm64.single.release = "./bin/android/libplugin_name_goes_here.android.template_release.arm64.so"
-android.arm64.double.release = "./bin/android/libplugin_name_goes_here.android.template_release.arm64.double.so"
+linux.debug.arm32 = "./bin/linux/libplugin_name_goes_here.linux.template_debug.arm32.so"
+linux.release.arm32 = "./bin/linux/libplugin_name_goes_here.linux.template_release.arm32.so"
 
-web.wasm32.single.debug.threads = "./bin/web/libplugin_name_goes_here.web.template_debug.wasm32.threads.wasm"
-web.wasm32.double.debug.threads = "./bin/web/libplugin_name_goes_here.web.template_debug.wasm32.double.threads.wasm"
-web.wasm32.single.release.threads = "./bin/web/libplugin_name_goes_here.web.template_release.wasm32.threads.wasm"
-web.wasm32.double.release.threads = "./bin/web/libplugin_name_goes_here.web.template_release.wasm32.double.threads.wasm"
-web.wasm32.single.debug.nothreads = "./bin/web/libplugin_name_goes_here.web.template_debug.wasm32.nothreads.wasm"
-web.wasm32.double.debug.nothreads = "./bin/web/libplugin_name_goes_here.web.template_debug.wasm32.double.nothreads.wasm"
-web.wasm32.single.release.nothreads = "./bin/web/libplugin_name_goes_here.web.template_release.wasm32.nothreads.wasm"
-web.wasm32.double.release.nothreads = "./bin/web/libplugin_name_goes_here.web.template_release.wasm32.double.nothreads.wasm"
+linux.debug.arm64 = "./bin/linux/libplugin_name_goes_here.linux.template_debug.arm64.so"
+linux.release.arm64 = "./bin/linux/libplugin_name_goes_here.linux.template_release.arm64.so"
 
+
+android.debug.x86_64 = "./bin/android/libplugin_name_goes_here.android.template_debug.x86_64.so"
+android.release.x86_64 = "./bin/android/libplugin_name_goes_here.android.template_release.x86_64.so"
+
+android.debug.arm64 = "./bin/android/libplugin_name_goes_here.android.template_debug.arm64.so"
+android.release.arm64 = "./bin/android/libplugin_name_goes_here.android.template_release.arm64.so"
+
+android.debug.arm32 = "./bin/android/libplugin_name_goes_here.android.template_debug.arm32.so"
+android.release.arm32 = "./bin/android/libplugin_name_goes_here.android.template_release.arm32.so"
+
+
+web.debug.threads.wasm32 = "./bin/web/libplugin_name_goes_here.web.template_debug.wasm32.threads.wasm"
+web.release.threads.wasm32 = "./bin/web/libplugin_name_goes_here.web.template_release.wasm32.threads.wasm"
+
+web.debug.wasm32 = "./bin/web/libplugin_name_goes_here.web.template_debug.wasm32.wasm"
+web.release.wasm32 = "./bin/web/libplugin_name_goes_here.web.template_release.wasm32.wasm"
 
 [dependencies]
-ios.single.debug = {
-  "./bin/libgodot-cpp.ios.template_debug.single.xcframework": ""
+ios.debug = {
+  "./bin/ios/libplugin_name_goes_here.ios.template_debug.single.xcframework": ""
 }
-ios.double.debug = {
-  "./bin/libgodot-cpp.ios.template_debug.double.xcframework": ""
-}
-ios.single.release = {
-  "./bin/libgodot-cpp.ios.template_release.single.xcframework": ""
-}
-ios.double.release = {
-  "./bin/libgodot-cpp.ios.template_release.double.xcframework": ""
+ios.release = {
+  "./bin/ios/libplugin_name_goes_here.ios.template_release.single.xcframework": ""
 }

@@ -25,9 +25,10 @@ jobs:
            { platform: android, arch: arm64, os: ubuntu-22.04 },
            { platform: ios, arch: arm64, os: macos-latest },
            { platform: web, arch: wasm32, os: ubuntu-22.04, threads: disabled },
+           { platform: web, arch: wasm32, os: ubuntu-22.04, threads: enabled }
           ]
         target-type: [template_debug] #template_release]
-        float-precision: [single, double]
+        float-precision: [single] #[double] -> if you need double precision, you can uncomment this line and add it to the matrix
 
     runs-on: ${{ matrix.target.os }}
     steps:
