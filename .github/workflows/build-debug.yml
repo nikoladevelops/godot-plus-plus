@@ -56,12 +56,12 @@ jobs:
         run: |
           cd godot-cpp
           mkdir -p bin/macos
-          scons platform=macos arch=x86_64 target=${{ matrix.target-type }} precision=${{ matrix.float-precision }} threads=${{ matrix.target.threads == 'enabled' && 'true' || 'false' }} use_lto=false
-          scons platform=macos arch=arm64 target=${{ matrix.target-type }} precision=${{ matrix.float-precision }} threads=${{ matrix.target.threads == 'enabled' && 'true' || 'false' }} use_lto=false
+          scons platform=macos target=${{ matrix.target-type }} precision=${{ matrix.float-precision }} threads=${{ matrix.target.threads == 'enabled' && 'true' || 'false' }} use_lto=false  # No 'arch' - builds universal by default
+          precision_suffix=$([[ "${{ matrix.float-precision }}" == "double" ]] && echo ".double" || echo "")
+          threads_suffix=$([[ "${{ matrix.target.threads == 'enabled' && 'true' || 'false' }}" == "true" ]] && echo ".threads" || echo ".nothreads")  # May not apply to universal; test filename
           mkdir -p bin/libgodot-cpp.macos.${{ matrix.target-type }}.${{ matrix.float-precision }}.framework
-          lipo -create bin/libgodot-cpp.macos.${{ matrix.target-type }}.x86_64.a bin/libgodot-cpp.macos.${{ matrix.target-type }}.arm64.a -output bin/libgodot-cpp.macos.${{ matrix.target-type }}.${{ matrix.float-precision }}.framework/libgodot-cpp
+          cp bin/libgodot-cpp.macos.${{ matrix.target-type }}${precision_suffix}${threads_suffix}.a bin/libgodot-cpp.macos.${{ matrix.target-type }}.${{ matrix.float-precision }}.framework/libgodot-cpp  # Adjust if no threads_suffix for universal
           mv bin/libgodot-cpp.macos.${{ matrix.target-type }}.${{ matrix.float-precision }}.framework ../bin/macos/
-
       # iOS build step (only runs for iOS)
       - name: Build godot-cpp for iOS
         if: ${{ matrix.target.platform == 'ios' }}
@@ -69,8 +69,9 @@ jobs:
           cd godot-cpp
           mkdir -p bin/ios
           scons platform=ios arch=arm64 target=${{ matrix.target-type }} precision=${{ matrix.float-precision }} threads=${{ matrix.target.threads == 'enabled' && 'true' || 'false' }}
-          mv bin/libgodot-cpp.ios.${{ matrix.target-type }}.arm64.a ../bin/ios/
-
+          threads_suffix=$([[ "${{ matrix.target.threads == 'enabled' && 'true' || 'false' }}" == "true" ]] && echo ".threads" || echo ".nothreads")
+          precision_suffix=$([[ "${{ matrix.float-precision }}" == "double" ]] && echo ".double" || echo "")
+          mv bin/libgodot-cpp.ios.${{ matrix.target-type }}${precision_suffix}.arm64${threads_suffix}.a ../bin/ios/
       - name: Build GDExtension
         shell: sh
         env:
