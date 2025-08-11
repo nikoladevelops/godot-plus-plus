@@ -162,8 +162,9 @@ if env['platform'] in ['macos', 'ios']:
         if env.get('arch') != 'universal':
             env['arch'] = 'universal'  # Fallback to universal for macOS
         framework_name = f"lib{libname}.macos.{env['target']}.{env['precision']}.framework"
+        framework_dir = f"bin/{env['platform']}/{framework_name}"
         # Create Info.plist file
-        plist_file = f"bin/{env['platform']}/{framework_name}/Info.plist"
+        plist_file = f"{framework_dir}/Info.plist"
         env.Command(
             plist_file,
             [],
@@ -171,23 +172,24 @@ if env['platform'] in ['macos', 'ios']:
         )
         # Create the .framework structure in bin/macos
         library = env.Command(
-            f"bin/{env['platform']}/{framework_name}/lib{libname}",
+            f"{framework_dir}/lib{libname}",
             temp_lib,
             [
-                f"mkdir -p {os.path.dirname('$TARGET')}",
+                f"mkdir -p {framework_dir}",
                 f"cp $SOURCE $TARGET"
             ]
         )
         env.Depends(library, plist_file)  # Ensure Info.plist is created before the framework binary
-        install_source = f"bin/{env['platform']}/{framework_name}"
+        install_source = framework_dir
     else:  # iOS
         # Single arm64 build
         if not env.get('arch'):
             env['arch'] = 'arm64'
         temp_framework_name = f"lib{libname}.ios.{env['target']}.{env['precision']}.framework"
         framework_name = f"lib{libname}.ios.{env['target']}.{env['precision']}.xcframework"
+        temp_framework_dir = f"bin/{env['platform']}/{temp_framework_name}"
         # Create Info.plist file
-        plist_file = f"bin/{env['platform']}/{temp_framework_name}/Info.plist"
+        plist_file = f"{temp_framework_dir}/Info.plist"
         env.Command(
             plist_file,
             [],
@@ -195,10 +197,10 @@ if env['platform'] in ['macos', 'ios']:
         )
         # Create temporary .framework in bin/ios
         temp_framework = env.Command(
-            f"bin/{env['platform']}/{temp_framework_name}/lib{libname}",
+            f"{temp_framework_dir}/lib{libname}",
             temp_lib,
             [
-                f"mkdir -p {os.path.dirname('$TARGET')}",
+                f"mkdir -p {temp_framework_dir}",
                 f"cp $SOURCE $TARGET"
             ]
         )
@@ -208,7 +210,7 @@ if env['platform'] in ['macos', 'ios']:
             f"bin/{env['platform']}/{framework_name}",
             temp_framework,
             [
-                f"xcodebuild -create-xcframework -framework {os.path.dirname('$SOURCE')} -output $TARGET"
+                f"xcodebuild -create-xcframework -framework {temp_framework_dir} -output $TARGET"
             ]
         )
         install_source = f"bin/{env['platform']}/{framework_name}"
