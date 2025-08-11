@@ -1,6 +1,6 @@
 name: Build GDExtension (Debug)
 on:
-  workflow_call:
+  workflow_dispatch:
 
 jobs:
   build:
