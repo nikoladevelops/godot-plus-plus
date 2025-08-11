@@ -40,6 +40,7 @@ opts.Add('source_dirs', 'List of source directories (comma-separated)', 'src')
 opts.Add('source_exts', 'List of source file extensions (comma-separated)', '.cpp,.c,.cc,.cxx')
 opts.Add('include_dirs', 'List of include directories (comma-separated)', 'include')
 opts.Add('doc_output_dir', 'Directory for documentation output', 'gen')
+opts.Add('precision', 'Floating-point precision (single or double)', 'single')  # Default to single
 
 # Update the environment with the options
 opts.Update(env)
@@ -63,6 +64,7 @@ source_dirs = env['source_dirs'].split(',')   # Convert comma-separated string t
 source_exts = env['source_exts'].split(',')   # Convert comma-separated string to list
 include_dirs = env['include_dirs'].split(',') # Convert comma-separated string to list
 doc_output_dir = env['doc_output_dir']        # Directory for documentation output
+precision = env.get('precision', 'single')     # Ensure precision defaults to single
 
 # Append include directories to CPPPATH
 env.Append(CPPPATH=include_dirs)
@@ -80,23 +82,9 @@ if env.get("target") in ["editor", "template_debug"]:
         print("Not including class reference as we're targeting a pre-4.3 baseline.")
 
 # Determine suffixes based on env (align with godot-cpp conventions)
-arch_suffix = f".{env['arch']}"
-
-if env['arch'] == 'universal':
-    arch_suffix = ''  # No suffix for universal builds  (mac and ios basically use this)
-
-# Suffix example: .windows.template_debug.x86_64
-suffix = f".{env['platform']}.{env['target']}{arch_suffix}"
-
-# Append .double if precision is set to double. WARNING - If you use double precision, you need to update your .gdextension file to use the correct suffix
-if env.get('precision') == 'double':
-    suffix = f"{suffix}.double"
-
-# Append .threads if threads are enabled (for web builds)
-if env['platform'] == 'web' and env.get('threads') in ['yes', 'true']:
-    suffix = f"{suffix}.threads"
-
-
+arch_suffix = f".{env['arch']}" if env['arch'] and env['arch'] != 'universal' else ''
+threads_suffix = '.threads' if env['platform'] == 'web' and env.get('threads') in ['yes', 'true'] else ''
+suffix = f".{env['platform']}.{env['target']}{arch_suffix}{threads_suffix}.{precision}"
 lib_filename = f"{env.subst('$SHLIBPREFIX')}{libname}{suffix}{env.subst('$SHLIBSUFFIX')}"
 
 # Generate Info.plist content for macOS and iOS
@@ -175,15 +163,15 @@ if env['platform'] in ['macos', 'ios']:
         # Ensure universal if specified
         if env.get('arch') != 'universal':
             env['arch'] = 'universal'  # Fallback to universal for macOS
-        framework_name = f"lib{libname}.macos.{env['target']}.{env['precision']}.framework"
-        framework_binary = f"lib{libname}.macos.{env['target']}.{env['precision']}"
+        framework_name = f"lib{libname}.macos.{env['target']}.{precision}.framework"
+        framework_binary = f"lib{libname}.macos.{env['target']}.{precision}"
         framework_dir = f"bin/{env['platform']}/{framework_name}"
         # Create Info.plist file
         plist_file = f"{framework_dir}/Info.plist"
         env.Command(
             plist_file,
             [],
-            lambda target, source, env: write_info_plist(target, source, env, generate_info_plist('macos', env['target'], env['precision']))
+            lambda target, source, env: write_info_plist(target, source, env, generate_info_plist('macos', env['target'], precision))
         )
         # Create the .framework structure in bin/macos
         library = env.Command(
@@ -200,16 +188,16 @@ if env['platform'] in ['macos', 'ios']:
         # Single arm64 build
         if not env.get('arch'):
             env['arch'] = 'arm64'
-        temp_framework_name = f"lib{libname}.ios.{env['target']}.{env['precision']}.framework"
-        framework_binary = f"lib{libname}.ios.{env['target']}.{env['precision']}"
-        framework_name = f"lib{libname}.ios.{env['target']}.{env['precision']}.xcframework"
+        temp_framework_name = f"lib{libname}.ios.{env['target']}.{precision}.framework"
+        framework_binary = f"lib{libname}.ios.{env['target']}.{precision}"
+        framework_name = f"lib{libname}.ios.{env['target']}.{precision}.xcframework"
         temp_framework_dir = f"bin/{env['platform']}/{temp_framework_name}"
         # Create Info.plist file
         plist_file = f"{temp_framework_dir}/Info.plist"
         env.Command(
             plist_file,
             [],
-            lambda target, source, env: write_info_plist(target, source, env, generate_info_plist('ios', env['target'], env['precision']))
+            lambda target, source, env: write_info_plist(target, source, env, generate_info_plist('ios', env['target'], precision))
         )
         # Create temporary .framework in bin/ios
         temp_framework = env.Command(
