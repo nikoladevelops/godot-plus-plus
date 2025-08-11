@@ -41,6 +41,7 @@ opts.Add('source_exts', 'List of source file extensions (comma-separated)', '.cp
 opts.Add('include_dirs', 'List of include directories (comma-separated)', 'include')
 opts.Add('doc_output_dir', 'Directory for documentation output', 'gen')
 opts.Add('precision', 'Floating-point precision (single or double)', 'single')  # Default to single
+opts.Add('bundle_id_prefix', 'Bundle identifier prefix (reverse-DNS format)', 'com.gdextension')  # Default prefix
 
 # Update the environment with the options
 opts.Update(env)
@@ -65,6 +66,7 @@ source_exts = env['source_exts'].split(',')   # Convert comma-separated string t
 include_dirs = env['include_dirs'].split(',') # Convert comma-separated string to list
 doc_output_dir = env['doc_output_dir']        # Directory for documentation output
 precision = env.get('precision', 'single')     # Ensure precision defaults to single
+bundle_id_prefix = env.get('bundle_id_prefix', 'com.gdextension')  # Ensure prefix defaults to com.gdextension
 
 # Append include directories to CPPPATH
 env.Append(CPPPATH=include_dirs)
@@ -90,6 +92,7 @@ lib_filename = f"{env.subst('$SHLIBPREFIX')}{libname}{suffix}{env.subst('$SHLIBS
 # Generate Info.plist content for macOS and iOS
 def generate_info_plist(platform, target, precision):
     framework_name = f"lib{libname}.{platform}.{target}.{precision}"
+    bundle_id = f"{bundle_id_prefix}.{libname}"  # Use configurable prefix
     if platform == 'macos':
         return f"""<?xml version="1.0" encoding="UTF-8"?>
 <!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
@@ -98,7 +101,7 @@ def generate_info_plist(platform, target, precision):
     <key>CFBundleExecutable</key>
     <string>{framework_name}</string>
     <key>CFBundleIdentifier</key>
-    <string>org.godotengine.lib{libname}</string>
+    <string>{bundle_id}</string>
     <key>CFBundleInfoDictionaryVersion</key>
     <string>6.0</string>
     <key>CFBundleName</key>
@@ -125,7 +128,7 @@ def generate_info_plist(platform, target, precision):
     <key>CFBundleExecutable</key>
     <string>{framework_name}</string>
     <key>CFBundleIdentifier</key>
-    <string>org.godotengine.lib{libname}</string>
+    <string>{bundle_id}</string>
     <key>CFBundleInfoDictionaryVersion</key>
     <string>6.0</string>
     <key>CFBundleName</key>
