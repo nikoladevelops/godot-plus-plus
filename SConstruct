@@ -79,17 +79,11 @@ if env.get("target") in ["editor", "template_debug"]:
     except AttributeError:
         print("Not including class reference as we're targeting a pre-4.3 baseline.")
 
-# Determine the library filename using godot-cpp naming
-suffix = f".{env['target']}"
-if env['platform'] in ['linux', 'android'] and env['arch'] in ['x86_32', 'x86_64', 'arm32', 'arm64']:
-    suffix += f".{env['arch']}"
-if env['platform'] == 'windows' and env['arch'] in ['x86_32', 'x86_64', 'arm64']:
-    suffix += f".{env['arch']}"
-if env['platform'] == 'web':
-    suffix += f".wasm32{env['suffix']}"  # Use godot-cpp's suffix (.threads/.nothreads)
-if env['platform'] not in ['macos', 'ios'] and env.get('precision') == 'double':
-    suffix += '.double'
-
+# Determine suffixes based on env (align with godot-cpp conventions)
+precision_suffix = '.double' if env.get('precision') == 'double' else ''
+threads_suffix = '.threads' if env.get('threads') in ['yes', 'true'] else '.nothreads'
+arch_suffix = f".{env['arch']}" if env['arch'] and env['arch'] != 'universal' else ''
+suffix = f".{env['target']}{precision_suffix}{arch_suffix}{threads_suffix}"
 lib_filename = f"{env.subst('$SHLIBPREFIX')}{libname}{suffix}{env.subst('$SHLIBSUFFIX')}"
 
 # Generate Info.plist content for macOS and iOS
@@ -152,43 +146,49 @@ def generate_info_plist(platform, target, precision):
 # Build the shared library
 library = None
 if env['platform'] in ['macos', 'ios']:
-    # For macOS and iOS, build for multiple architectures and create framework/xcframework
-    arches = ['x86_64', 'arm64'] if env['platform'] == 'macos' else ['arm64']
-    temp_libs = []
-    for arch in arches:
-        arch_env = env.Clone()
-        arch_env['arch'] = arch
-        arch_suffix = f".{env['target']}.{arch}"
-        if env.get('precision') == 'double':
-            arch_suffix += '.double'
-        arch_lib_filename = f"{env.subst('$SHLIBPREFIX')}{libname}{arch_suffix}{env.subst('$SHLIBSUFFIX')}"
-        arch_lib = arch_env.SharedLibrary(
-            f"bin/{env['platform']}/{arch_lib_filename}",
+    # Handle macOS (universal) and iOS (arm64) without loops
+    if env['platform'] == 'macos':
+        # Ensure universal if specified (godot-cpp adds -arch flags)
+        if env.get('arch') != 'universal':
+            env['arch'] = 'universal'  # Fallback to universal for macOS
+        framework_name = f"lib{libname}.macos.{env['target']}.{env['precision']}.framework"
+        temp_lib = env.SharedLibrary(
+            f"bin/{env['platform']}/{lib_filename}",
             source=sources
         )
-        temp_libs.append(arch_lib)
-    
-    # Create .framework for macOS or .xcframework for iOS
-    if env['platform'] == 'macos':
-        framework_name = f"lib{libname}.macos.{env['target']}.{env['precision']}.framework"
         library = env.Command(
             f"{projectdir}/{libname}/bin/macos/{framework_name}",
-            temp_libs,
+            temp_lib,
             [
                 f"mkdir -p $TARGET",
-                f"lipo -create {' '.join('$SOURCES')} -output $TARGET/lib{libname}",
+                f"cp $SOURCE $TARGET/lib{libname}",  # Copy and rename the fat dylib
                 f"echo '{generate_info_plist('macos', env['target'], env['precision'])}' > $TARGET/Info.plist"
             ]
         )
     else:  # iOS
+        # Single arm64 build
+        if not env.get('arch'):
+            env['arch'] = 'arm64'
+        temp_framework_name = f"lib{libname}.ios.{env['target']}.{env['precision']}.framework"
         framework_name = f"lib{libname}.ios.{env['target']}.{env['precision']}.xcframework"
-        library = env.Command(
-            f"{projectdir}/{libname}/bin/ios/{framework_name}",
-            temp_libs,
+        temp_lib = env.SharedLibrary(
+            f"bin/{env['platform']}/{lib_filename}",
+            source=sources
+        )
+        temp_framework = env.Command(
+            f"bin/{env['platform']}/{temp_framework_name}",
+            temp_lib,
             [
                 f"mkdir -p $TARGET",
-                f"xcodebuild -create-xcframework -library $SOURCES -output $TARGET",
+                f"cp $SOURCE $TARGET/lib{libname}",  # Copy and rename
                 f"echo '{generate_info_plist('ios', env['target'], env['precision'])}' > $TARGET/Info.plist"
+            ]
+        )
+        library = env.Command(
+            f"{projectdir}/{libname}/bin/ios/{framework_name}",
+            temp_framework,
+            [
+                f"xcodebuild -create-xcframework -framework $SOURCE -output $TARGET"
             ]
         )
 else:

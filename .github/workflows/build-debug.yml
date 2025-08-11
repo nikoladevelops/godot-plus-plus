@@ -50,40 +50,12 @@ jobs:
           scons-cache: ${{ github.workspace }}/.scons-cache/
           cache-name: ${{ matrix.target.platform }}_${{ matrix.target.arch }}_${{ matrix.float-precision }}_${{ matrix.target-type }}
 
-      # macOS build step (only runs for macOS)
-      - name: Build godot-cpp for macOS
-        if: ${{ matrix.target.platform == 'macos' }}
-        run: |
-          cd godot-cpp
-          mkdir -p bin/macos
-          scons platform=macos target=${{ matrix.target-type }} precision=${{ matrix.float-precision }} threads=${{ matrix.target.threads == 'enabled' && 'true' || 'false' }} use_lto=false  # No 'arch' - builds universal by default
-          precision_suffix=$([[ "${{ matrix.float-precision }}" == "double" ]] && echo ".double" || echo "")
-          threads_suffix=$([[ "${{ matrix.target.threads == 'enabled' && 'true' || 'false' }}" == "true" ]] && echo ".threads" || echo ".nothreads")  # May not apply to universal; test filename
-          mkdir -p bin/libgodot-cpp.macos.${{ matrix.target-type }}.${{ matrix.float-precision }}.framework
-          cp bin/libgodot-cpp.macos.${{ matrix.target-type }}${precision_suffix}${threads_suffix}.a bin/libgodot-cpp.macos.${{ matrix.target-type }}.${{ matrix.float-precision }}.framework/libgodot-cpp  # Adjust if no threads_suffix for universal
-          mv bin/libgodot-cpp.macos.${{ matrix.target-type }}.${{ matrix.float-precision }}.framework ../bin/macos/
-      # iOS build step (only runs for iOS)
-      - name: Build godot-cpp for iOS
-        if: ${{ matrix.target.platform == 'ios' }}
-        run: |
-          cd godot-cpp
-          mkdir -p bin/ios
-          scons platform=ios arch=arm64 target=${{ matrix.target-type }} precision=${{ matrix.float-precision }} threads=${{ matrix.target.threads == 'enabled' && 'true' || 'false' }}
-          threads_suffix=$([[ "${{ matrix.target.threads == 'enabled' && 'true' || 'false' }}" == "true" ]] && echo ".threads" || echo ".nothreads")
-          precision_suffix=$([[ "${{ matrix.float-precision }}" == "double" ]] && echo ".double" || echo "")
-          mv bin/libgodot-cpp.ios.${{ matrix.target-type }}${precision_suffix}.arm64${threads_suffix}.a ../bin/ios/
       - name: Build GDExtension
         shell: sh
         env:
           SCONS_CACHE: ${{ github.workspace }}/.scons-cache/
         run: |
           scons target=${{ matrix.target-type }} platform=${{ matrix.target.platform }} arch=${{ matrix.target.arch }} precision=${{ matrix.float-precision }} threads=${{ matrix.target.threads == 'enabled' && 'true' || 'false' }} use_lto=false
-          if [ "${{ matrix.target.platform }}" = "ios" ]; then
-            mkdir -p test_project/plugin_name_goes_here/bin/ios
-            xcodebuild -create-xcframework \
-              -library bin/ios/libplugin_name_goes_here.ios.${{ matrix.target-type }}.arm64${{ matrix.float-precision == 'double' && '.double' || '' }}.dylib \
-              -output test_project/plugin_name_goes_here/bin/ios/libplugin_name_goes_here.ios.${{ matrix.target-type }}.${{ matrix.float-precision }}.xcframework
-          fi
 
       - name: Save .scons_cache
         uses: ./godot-cpp/.github/actions/godot-cache-save
