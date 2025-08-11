@@ -143,6 +143,11 @@ def generate_info_plist(platform, target, precision):
 </dict>
 </plist>"""
 
+# Function to write Info.plist content to a file
+def write_info_plist(target, source, env, plist_content):
+    with open(target[0].abspath, 'w') as f:
+        f.write(plist_content)
+
 # Build the shared library and create frameworks
 library = None
 install_source = None
@@ -157,42 +162,56 @@ if env['platform'] in ['macos', 'ios']:
         if env.get('arch') != 'universal':
             env['arch'] = 'universal'  # Fallback to universal for macOS
         framework_name = f"lib{libname}.macos.{env['target']}.{env['precision']}.framework"
+        # Create Info.plist file
+        plist_file = f"bin/{env['platform']}/{framework_name}/Info.plist"
+        env.Command(
+            plist_file,
+            [],
+            lambda target, source, env: write_info_plist(target, source, env, generate_info_plist('macos', env['target'], env['precision']))
+        )
         # Create the .framework structure in bin/macos
         library = env.Command(
-            f"bin/{env['platform']}/{framework_name}",
+            f"bin/{env['platform']}/{framework_name}/lib{libname}",
             temp_lib,
             [
-                f"mkdir -p $TARGET",
-                f"cp $SOURCE $TARGET/lib{libname}",
-                f"echo '{generate_info_plist('macos', env['target'], env['precision'])}' > $TARGET/Info.plist"
+                f"mkdir -p {os.path.dirname('$TARGET')}",
+                f"cp $SOURCE $TARGET"
             ]
         )
-        install_source = library
+        env.Depends(library, plist_file)  # Ensure Info.plist is created before the framework binary
+        install_source = f"bin/{env['platform']}/{framework_name}"
     else:  # iOS
         # Single arm64 build
         if not env.get('arch'):
             env['arch'] = 'arm64'
         temp_framework_name = f"lib{libname}.ios.{env['target']}.{env['precision']}.framework"
         framework_name = f"lib{libname}.ios.{env['target']}.{env['precision']}.xcframework"
+        # Create Info.plist file
+        plist_file = f"bin/{env['platform']}/{temp_framework_name}/Info.plist"
+        env.Command(
+            plist_file,
+            [],
+            lambda target, source, env: write_info_plist(target, source, env, generate_info_plist('ios', env['target'], env['precision']))
+        )
         # Create temporary .framework in bin/ios
         temp_framework = env.Command(
-            f"bin/{env['platform']}/{temp_framework_name}",
+            f"bin/{env['platform']}/{temp_framework_name}/lib{libname}",
             temp_lib,
             [
-                f"mkdir -p $TARGET",
-                f"cp $SOURCE $TARGET/lib{libname}",
-                f"echo '{generate_info_plist('ios', env['target'], env['precision'])}' > $TARGET/Info.plist"
+                f"mkdir -p {os.path.dirname('$TARGET')}",
+                f"cp $SOURCE $TARGET"
             ]
         )
+        env.Depends(temp_framework, plist_file)  # Ensure Info.plist is created before the framework binary
         # Create .xcframework in bin/ios
         library = env.Command(
             f"bin/{env['platform']}/{framework_name}",
             temp_framework,
             [
-                f"xcodebuild -create-xcframework -framework $SOURCE -output $TARGET"
+                f"xcodebuild -create-xcframework -framework {os.path.dirname('$SOURCE')} -output $TARGET"
             ]
         )
-        install_source = library
+        install_source = f"bin/{env['platform']}/{framework_name}"
 else:
     # For other platforms, build a single shared library
     library = env.SharedLibrary(
