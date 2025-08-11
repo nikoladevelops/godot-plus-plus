@@ -88,19 +88,20 @@ lib_filename = f"{env.subst('$SHLIBPREFIX')}{libname}{suffix}{env.subst('$SHLIBS
 
 # Generate Info.plist content for macOS and iOS
 def generate_info_plist(platform, target, precision):
+    framework_name = f"lib{libname}.{platform}.{target}.{precision}"
     if platform == 'macos':
         return f"""<?xml version="1.0" encoding="UTF-8"?>
 <!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
 <plist version="1.0">
 <dict>
     <key>CFBundleExecutable</key>
-    <string>lib{libname}</string>
+    <string>{framework_name}</string>
     <key>CFBundleIdentifier</key>
     <string>org.godotengine.lib{libname}</string>
     <key>CFBundleInfoDictionaryVersion</key>
     <string>6.0</string>
     <key>CFBundleName</key>
-    <string>lib{libname}.macos.{target}</string>
+    <string>{framework_name}</string>
     <key>CFBundlePackageType</key>
     <string>FMWK</string>
     <key>CFBundleShortVersionString</key>
@@ -121,13 +122,13 @@ def generate_info_plist(platform, target, precision):
 <plist version="1.0">
 <dict>
     <key>CFBundleExecutable</key>
-    <string>lib{libname}</string>
+    <string>{framework_name}</string>
     <key>CFBundleIdentifier</key>
     <string>org.godotengine.lib{libname}</string>
     <key>CFBundleInfoDictionaryVersion</key>
     <string>6.0</string>
     <key>CFBundleName</key>
-    <string>lib{libname}.ios.{target}</string>
+    <string>{framework_name}</string>
     <key>CFBundlePackageType</key>
     <string>FMWK</string>
     <key>CFBundleShortVersionString</key>
@@ -162,6 +163,7 @@ if env['platform'] in ['macos', 'ios']:
         if env.get('arch') != 'universal':
             env['arch'] = 'universal'  # Fallback to universal for macOS
         framework_name = f"lib{libname}.macos.{env['target']}.{env['precision']}.framework"
+        framework_binary = f"lib{libname}.macos.{env['target']}.{env['precision']}"
         framework_dir = f"bin/{env['platform']}/{framework_name}"
         # Create Info.plist file
         plist_file = f"{framework_dir}/Info.plist"
@@ -172,7 +174,7 @@ if env['platform'] in ['macos', 'ios']:
         )
         # Create the .framework structure in bin/macos
         library = env.Command(
-            f"{framework_dir}/lib{libname}",
+            f"{framework_dir}/{framework_binary}",
             temp_lib,
             [
                 f"mkdir -p {framework_dir}",
@@ -186,6 +188,7 @@ if env['platform'] in ['macos', 'ios']:
         if not env.get('arch'):
             env['arch'] = 'arm64'
         temp_framework_name = f"lib{libname}.ios.{env['target']}.{env['precision']}.framework"
+        framework_binary = f"lib{libname}.ios.{env['target']}.{env['precision']}"
         framework_name = f"lib{libname}.ios.{env['target']}.{env['precision']}.xcframework"
         temp_framework_dir = f"bin/{env['platform']}/{temp_framework_name}"
         # Create Info.plist file
@@ -197,7 +200,7 @@ if env['platform'] in ['macos', 'ios']:
         )
         # Create temporary .framework in bin/ios
         temp_framework = env.Command(
-            f"{temp_framework_dir}/lib{libname}",
+            f"{temp_framework_dir}/{framework_binary}",
             temp_lib,
             [
                 f"mkdir -p {temp_framework_dir}",
