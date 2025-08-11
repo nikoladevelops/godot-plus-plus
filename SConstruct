@@ -179,7 +179,8 @@ if env['platform'] in ['macos', 'ios']:
             temp_lib,
             [
                 f"mkdir -p {framework_dir}",
-                f"cp $SOURCE $TARGET"
+                f"cp $SOURCE $TARGET",
+                f"rm -f bin/{env['platform']}/{lib_filename}"  # Clean up temporary .dylib
             ]
         )
         env.Depends(library, plist_file)  # Ensure Info.plist is created before the framework binary
@@ -214,7 +215,9 @@ if env['platform'] in ['macos', 'ios']:
             f"bin/{env['platform']}/{framework_name}",
             temp_framework,
             [
-                f"xcodebuild -create-xcframework -framework {temp_framework_dir} -output $TARGET"
+                f"xcodebuild -create-xcframework -framework {temp_framework_dir} -output $TARGET",
+                f"rm -rf {temp_framework_dir}",  # Clean up temporary .framework
+                f"rm -f bin/{env['platform']}/{lib_filename}"  # Clean up temporary .dylib
             ]
         )
         install_source = f"bin/{env['platform']}/{framework_name}"
