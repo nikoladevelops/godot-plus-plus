@@ -94,7 +94,7 @@ def generate_info_plist(platform, target, precision):
 <plist version="1.0">
 <dict>
     <key>CFBundleExecutable</key>
-    <string>lib{libname}.{target}</string>
+    <string>lib{libname}</string>
     <key>CFBundleIdentifier</key>
     <string>org.godotengine.lib{libname}</string>
     <key>CFBundleInfoDictionaryVersion</key>
@@ -121,7 +121,7 @@ def generate_info_plist(platform, target, precision):
 <plist version="1.0">
 <dict>
     <key>CFBundleExecutable</key>
-    <string>lib{libname}.{target}</string>
+    <string>lib{libname}</string>
     <key>CFBundleIdentifier</key>
     <string>org.godotengine.lib{libname}</string>
     <key>CFBundleInfoDictionaryVersion</key>
@@ -143,64 +143,67 @@ def generate_info_plist(platform, target, precision):
 </dict>
 </plist>"""
 
-# Build the shared library
+# Build the shared library and create frameworks
 library = None
+install_source = None
 if env['platform'] in ['macos', 'ios']:
-    # Handle macOS (universal) and iOS (arm64) without loops
+    # Build the shared library first in bin/{platform}
+    temp_lib = env.SharedLibrary(
+        f"bin/{env['platform']}/{lib_filename}",
+        source=sources
+    )
     if env['platform'] == 'macos':
-        # Ensure universal if specified (godot-cpp adds -arch flags)
+        # Ensure universal if specified
         if env.get('arch') != 'universal':
             env['arch'] = 'universal'  # Fallback to universal for macOS
         framework_name = f"lib{libname}.macos.{env['target']}.{env['precision']}.framework"
-        temp_lib = env.SharedLibrary(
-            f"bin/{env['platform']}/{lib_filename}",
-            source=sources
-        )
+        # Create the .framework structure in bin/macos
         library = env.Command(
-            f"{projectdir}/{libname}/bin/macos/{framework_name}",
+            f"bin/{env['platform']}/{framework_name}",
             temp_lib,
             [
                 f"mkdir -p $TARGET",
-                f"cp $SOURCE $TARGET/lib{libname}",  # Copy and rename the fat dylib
+                f"cp $SOURCE $TARGET/lib{libname}",
                 f"echo '{generate_info_plist('macos', env['target'], env['precision'])}' > $TARGET/Info.plist"
             ]
         )
+        install_source = library
     else:  # iOS
         # Single arm64 build
         if not env.get('arch'):
             env['arch'] = 'arm64'
         temp_framework_name = f"lib{libname}.ios.{env['target']}.{env['precision']}.framework"
         framework_name = f"lib{libname}.ios.{env['target']}.{env['precision']}.xcframework"
-        temp_lib = env.SharedLibrary(
-            f"bin/{env['platform']}/{lib_filename}",
-            source=sources
-        )
+        # Create temporary .framework in bin/ios
         temp_framework = env.Command(
             f"bin/{env['platform']}/{temp_framework_name}",
             temp_lib,
             [
                 f"mkdir -p $TARGET",
-                f"cp $SOURCE $TARGET/lib{libname}",  # Copy and rename
+                f"cp $SOURCE $TARGET/lib{libname}",
                 f"echo '{generate_info_plist('ios', env['target'], env['precision'])}' > $TARGET/Info.plist"
             ]
         )
+        # Create .xcframework in bin/ios
         library = env.Command(
-            f"{projectdir}/{libname}/bin/ios/{framework_name}",
+            f"bin/{env['platform']}/{framework_name}",
             temp_framework,
             [
                 f"xcodebuild -create-xcframework -framework $SOURCE -output $TARGET"
             ]
         )
+        install_source = library
 else:
     # For other platforms, build a single shared library
     library = env.SharedLibrary(
         f"bin/{env['platform']}/{lib_filename}",
         source=sources
     )
+    install_source = library
 
-# Install the library
+# Install the library to test_project
 install_dir = f"{projectdir}/{libname}/bin/{env['platform']}/"
-copy = env.Install(install_dir, library)
+copy = env.Install(install_dir, source=install_source)
 
 # Set default targets
 default_args = [library, copy]
