@@ -93,21 +93,32 @@ jobs:
   merge:
     runs-on: ubuntu-22.04
     needs: build
-    # Define environment variables for the entire job
     env:
-      PLUGIN_NAME: plugin_name_goes_here
+      PLUGIN_NAME: plugin_name_goes_here # Make sure this matches your env var
     steps:
       - name: Checkout
         uses: actions/checkout@v4
 
-      - name: Create fresh plugin folder
-        run: mkdir -p ${{ env.PLUGIN_NAME }}
+      - name: Create directories
+        run: |
+          mkdir -p artifacts
+          mkdir -p ${{ env.PLUGIN_NAME }}/bin
 
-      - name: Download all artifacts
+      - name: Download all build artifacts
         uses: actions/download-artifact@v4
         with:
-          merge-multiple: true
-          path: ${{ env.PLUGIN_NAME }}/bin
+          # No 'name' is specified, so all artifacts from the workflow run will be downloaded.
+          # Each artifact will be placed in a separate directory inside 'artifacts/'.
+          path: artifacts
+
+      - name: List downloaded files for debugging
+        run: ls -R artifacts
+
+      - name: Consolidate plugin files
+        run: |
+          # Use find to locate all compiled library files in the downloaded artifact folders
+          # and copy them to the final bin directory. This is safe from overwrites.
+          find artifacts -type f \( -name "*.so" -o -name "*.dll" -o -name "*.dylib" -o -name "*.wasm" \) -exec cp {} ${{ env.PLUGIN_NAME }}/bin/ \;
 
       - name: Copy .gdextension file
         run: cp "test_project/${{ env.PLUGIN_NAME }}/${{ env.PLUGIN_NAME }}.gdextension" "${{ env.PLUGIN_NAME }}/${{ env.PLUGIN_NAME }}.gdextension"
@@ -118,11 +129,14 @@ jobs:
             cp "LICENSE.md" "${{ env.PLUGIN_NAME }}/LICENSE.md"
           fi
 
+      - name: List final bin contents for debugging
+        run: ls -R ${{ env.PLUGIN_NAME }}
+
       - name: Create zip archive
         run: zip -r ${{ env.PLUGIN_NAME }}.zip ${{ env.PLUGIN_NAME }}
 
       - name: Upload final artifact
         uses: actions/upload-artifact@v4
         with:
-          name: "${{ env.PLUGIN_NAME }}.zip"
+          name: "${{ env.PLUGIN_NAME }}"
           path: "${{ env.PLUGIN_NAME }}.zip"
