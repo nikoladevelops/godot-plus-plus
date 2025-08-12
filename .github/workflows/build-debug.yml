@@ -56,20 +56,20 @@ jobs:
         uses: ./godot-cpp/.github/actions/godot-cache-restore
         with:
           scons-cache: ${{ github.workspace }}/.scons-cache/
-          cache-name: ${{ matrix.target.platform }}_${{ matrix.target.arch }}_${{ matrix.float-precision }}_${{ matrix.target-type }}
+          cache-name: ${{ matrix.target.platform }}_${{ matrix.target.arch }}_${{ matrix.float-precision }}_${{ matrix.target-type }}${{ (matrix.target.platform == 'web' && matrix.target.threads == 'enabled') && '.threads' || '' }}
 
       - name: Build GDExtension Debug Build
         shell: sh
         env:
           SCONS_CACHE: ${{ github.workspace }}/.scons-cache/
         run: |
-          scons target=${{ matrix.target-type }} platform=${{ matrix.target.platform }} arch=${{ matrix.target.arch }} precision=${{ matrix.float-precision }}
+          scons target=${{ matrix.target-type }} platform=${{ matrix.target.platform }} arch=${{ matrix.target.arch }} precision=${{ matrix.float-precision }}${{ (matrix.target.platform == 'web') && format(' threads={0}', matrix.target.threads) || '' }}
 
       - name: Save .scons_cache
         uses: ./godot-cpp/.github/actions/godot-cache-save
         with:
           scons-cache: ${{ github.workspace }}/.scons-cache/
-          cache-name: ${{ matrix.target.platform }}_${{ matrix.target.arch }}_${{ matrix.float-precision }}_${{ matrix.target-type }}
+          cache-name: ${{ matrix.target.platform }}_${{ matrix.target.arch }}_${{ matrix.float-precision }}_${{ matrix.target-type }}${{ (matrix.target.platform == 'web' && matrix.target.threads == 'enabled') && '.threads' || '' }}
 
       # Clean up compilation files
       - name: Windows - Delete compilation files
@@ -105,15 +105,13 @@ jobs:
         run: |
           cp "test_project/${{ env.PLUGIN_NAME }}/${{ env.PLUGIN_NAME }}.gdextension" "./${{ env.PLUGIN_NAME }}.gdextension"
 
-      - name: Copy LICENSE.md if exists
-        run: |
-          if [ -f "LICENSE.md" ]; then
-            cp LICENSE.md ./
-          fi
-
       - name: Create final zip
         run: |
-          zip -r "${{ env.PLUGIN_NAME }}.zip" bin "${{ env.PLUGIN_NAME }}.gdextension" $( [ -f LICENSE.md ] && echo LICENSE.md )
+          if [ -f LICENSE.md ]; then
+            zip -r "${{ env.PLUGIN_NAME }}.zip" bin "${{ env.PLUGIN_NAME }}.gdextension" LICENSE.md
+          else
+            zip -r "${{ env.PLUGIN_NAME }}.zip" bin "${{ env.PLUGIN_NAME }}.gdextension"
+          fi
 
       - name: Upload final zip
         uses: actions/upload-artifact@v4
