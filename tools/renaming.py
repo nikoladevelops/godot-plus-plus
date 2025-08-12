@@ -175,6 +175,21 @@ def update_dont_touch(new_name):
     with open(path, "w", encoding="utf-8") as f:
         f.writelines(lines)
 
+def edit_github_yml(path, old_name, new_name):
+    backup_file(path)
+    with open(path, "r", encoding="utf-8") as f:
+        content = f.read()
+
+    # Replace the PLUGIN_NAME line
+    content = re.sub(
+        r'(PLUGIN_NAME:\s*")[^"]+(")',
+        rf'\1{new_name.lower()}\2',
+        content
+    )
+
+    with open(path, "w", encoding="utf-8") as f:
+        f.write(content)
+
 def update_plugin_name(new_name):
     old_name = get_old_plugin_name()
 
@@ -202,6 +217,11 @@ def update_plugin_name(new_name):
         edit_register_types(paths["register_types"], new_name)
         edit_sconstruct(paths["sconstruct"], new_name)
         update_dont_touch(new_name)
+
+        # Edit the build-debug.yml file
+        build_debug_path = os.path.join(PARENT_DIR, ".github", "workflows", "build-debug.yml")
+        if os.path.exists(build_debug_path):
+            edit_github_yml(build_debug_path, old_name, new_name)
 
         print("\nPlugin renamed successfully.\nPlease recompile the plugin to apply changes.\n")
         input("Press any key to continue...")
