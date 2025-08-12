@@ -99,10 +99,9 @@ jobs:
       - name: Checkout
         uses: actions/checkout@v4
 
-      - name: Create directories
-        run: |
-          mkdir -p artifacts
-          mkdir -p ${{ env.PLUGIN_NAME }}/bin
+      - name: Create artifacts directory
+        # The script will create the final plugin structure dynamically
+        run: mkdir -p artifacts
 
       - name: Download all build artifacts
         uses: actions/download-artifact@v4
@@ -114,11 +113,29 @@ jobs:
       - name: List downloaded files for debugging
         run: ls -R artifacts
 
-      - name: Consolidate plugin files
+      - name: Organize artifacts by platform
         run: |
-          # Use find to locate all compiled library files in the downloaded artifact folders
-          # and copy them to the final bin directory. This is safe from overwrites.
-          find artifacts -type f \( -name "*.so" -o -name "*.dll" -o -name "*.dylib" -o -name "*.wasm" \) -exec cp {} ${{ env.PLUGIN_NAME }}/bin/ \;
+          # Create the top-level plugin directory that will be zipped
+          mkdir -p ${{ env.PLUGIN_NAME }}/bin
+          
+          # Loop through each downloaded artifact directory inside 'artifacts'
+          for artifact_dir in artifacts/*/; do
+            # Remove trailing slash to get the directory name, which is the artifact name
+            artifact_name=$(basename "$artifact_dir")
+            
+            # Extract platform name (the part before the first '.')
+            platform=$(echo "$artifact_name" | cut -d'.' -f1)
+            
+            # Define the target directory for this platform's binaries
+            target_dir="${{ env.PLUGIN_NAME }}/bin/$platform"
+            
+            echo "Creating target directory: $target_dir"
+            mkdir -p "$target_dir"
+            
+            # Copy all files from the downloaded artifact directory to the new platform-specific directory
+            echo "Copying files from $artifact_dir to $target_dir"
+            cp -r "$artifact_dir"* "$target_dir/"
+          done
 
       - name: Copy .gdextension file
         run: cp "test_project/${{ env.PLUGIN_NAME }}/${{ env.PLUGIN_NAME }}.gdextension" "${{ env.PLUGIN_NAME }}/${{ env.PLUGIN_NAME }}.gdextension"
