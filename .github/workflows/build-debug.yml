@@ -15,18 +15,18 @@ jobs:
         # See https://docs.github.com/en/actions/writing-workflows/choosing-what-your-workflow-does/running-variations-of-jobs-in-a-workflow
         target:
           [
-           { platform: linux, arch: x86_32, os: ubuntu-22.04 },
-           { platform: linux, arch: x86_64, os: ubuntu-22.04 },
-           { platform: linux, arch: arm32, os: ubuntu-22.04-arm },
-           { platform: linux, arch: arm64, os: ubuntu-22.04-arm },
-           { platform: windows, arch: x86_32, os: windows-latest },
-           { platform: windows, arch: x86_64, os: windows-latest },
-           { platform: windows, arch: arm64, os: windows-latest },
-           { platform: macos, arch: universal, os: macos-latest },
-           { platform: android, arch: x86_64, os: ubuntu-22.04 },
-           { platform: android, arch: arm32, os: ubuntu-22.04 },
-           { platform: android, arch: arm64, os: ubuntu-22.04 },
-           { platform: ios, arch: arm64, os: macos-latest },
+          #  { platform: linux, arch: x86_32, os: ubuntu-22.04 },
+          #  { platform: linux, arch: x86_64, os: ubuntu-22.04 },
+          #  { platform: linux, arch: arm32, os: ubuntu-22.04-arm },
+          #  { platform: linux, arch: arm64, os: ubuntu-22.04-arm },
+          #  { platform: windows, arch: x86_32, os: windows-latest },
+          #  { platform: windows, arch: x86_64, os: windows-latest },
+          #  { platform: windows, arch: arm64, os: windows-latest },
+          #  { platform: macos, arch: universal, os: macos-latest },
+          #  { platform: android, arch: x86_64, os: ubuntu-22.04 },
+          #  { platform: android, arch: arm32, os: ubuntu-22.04 },
+          #  { platform: android, arch: arm64, os: ubuntu-22.04 },
+          #  { platform: ios, arch: arm64, os: macos-latest },
            { platform: web, arch: wasm32, os: ubuntu-22.04, threads: disabled },
            { platform: web, arch: wasm32, os: ubuntu-22.04, threads: enabled }
           ]
@@ -105,26 +105,7 @@ jobs:
         uses: actions/download-artifact@v4
         with:
           merge-multiple: true
-          path: ${{ env.PLUGIN_NAME }}
-
-      - name: Flatten and group by platform
-        run: |
-          # Create the top-level bin directory
-          mkdir -p ${{ env.PLUGIN_NAME }}/bin
-          
-          # Find all artifact directories
-          for artifact_dir in ${{ env.PLUGIN_NAME }}/*; do
-            if [ -d "$artifact_dir" ]; then
-              # Extract platform from artifact name (e.g., 'windows' from 'windows.x86_64.single.release')
-              platform=$(basename "$artifact_dir" | cut -d'.' -f1)
-              # Create platform-specific bin subfolder
-              mkdir -p ${{ env.PLUGIN_NAME }}/bin/$platform
-              # Move all files from artifact's bin/ (including subfolders) to platform subfolder
-              find "$artifact_dir/bin" -type f -mindepth 1 -exec mv -n {} ${{ env.PLUGIN_NAME }}/bin/$platform/ \;
-            fi
-          done
-          # Remove empty directories
-          find ${{ env.PLUGIN_NAME }} -type d -empty -delete
+          path: ${{ env.PLUGIN_NAME }}/bin
 
       - name: Copy .gdextension file
         run: cp "test_project/${{ env.PLUGIN_NAME }}/${{ env.PLUGIN_NAME }}.gdextension" "./${{ env.PLUGIN_NAME }}.gdextension"
