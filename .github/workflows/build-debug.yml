@@ -63,15 +63,31 @@ jobs:
         env:
           SCONS_CACHE: ${{ github.workspace }}/.scons-cache/
         run: |
+          echo "=== DEBUG: Build Parameters ==="
+          echo "Platform: ${{ matrix.target.platform }}"
+          echo "Arch: ${{ matrix.target.arch }}"
+          echo "Threads setting: ${{ matrix.target.threads }}"
+          echo "Target type: ${{ matrix.target-type }}"
+          echo "Float precision: ${{ matrix.float-precision }}"
+          echo "==============================="
+
           THREADS_FLAG=""
           if [ "${{ matrix.target.platform }}" = "web" ]; then
             if [ "${{ matrix.target.threads }}" = "enabled" ]; then
               THREADS_FLAG=" threads=yes"
+              echo "DEBUG: Setting THREADS_FLAG to 'threads=yes'"
             else
               THREADS_FLAG=" threads=no"
+              echo "DEBUG: Setting THREADS_FLAG to 'threads=no'"
             fi
           fi
+
+          echo "Final THREADS_FLAG: '$THREADS_FLAG'"
+          echo "Running SCons command..."
+          echo "scons target=${{ matrix.target-type }} platform=${{ matrix.target.platform }} arch=${{ matrix.target.arch }} precision=${{ matrix.float-precision }}$THREADS_FLAG"
+
           scons target=${{ matrix.target-type }} platform=${{ matrix.target.platform }} arch=${{ matrix.target.arch }} precision=${{ matrix.float-precision }}$THREADS_FLAG
+
 
       - name: Save .scons_cache
         uses: ./godot-cpp/.github/actions/godot-cache-save
