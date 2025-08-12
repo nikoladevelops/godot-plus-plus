@@ -56,7 +56,7 @@ jobs:
         uses: ./godot-cpp/.github/actions/godot-cache-restore
         with:
           scons-cache: ${{ github.workspace }}/.scons-cache/
-          cache-name: ${{ matrix.target.platform }}_${{ matrix.target.arch }}_${{ matrix.float-precision }}_${{ matrix.target-type }}${{ (matrix.target.platform == 'web' && matrix.target.threads == 'enabled') && '.threads' || '' }}
+          cache-name: ${{env.PLUGIN_NAME}}.${{ matrix.target.platform }}.${{matrix.target-type}}.${{ matrix.target.arch }}.${{ matrix.float-precision }}${{ (matrix.target.platform == 'web' && matrix.target.threads == 'enabled') && '-threads' || '' }}
 
       - name: Build GDExtension
         shell: sh
@@ -87,67 +87,39 @@ jobs:
       - name: Upload Artifact
         uses: actions/upload-artifact@v4
         with:
-          name: ${{ steps.build.outputs.binary_name }}
-          path: ${{ steps.build.outputs.binary_path }}
-
-      - name: Upload Artifact
-        uses: actions/upload-artifact@v4
-        with:
-          # Exact platform bin folder — preserves real file names
-          name: "${{ env.PLUGIN_NAME }}.${{ matrix.target.platform }}.${{ matrix.target.target-type }}.${{ matrix.target.arch }}.${{ matrix.target.float-precision }}${{ (matrix.target.platform == 'web' && matrix.target.threads == 'enabled') && '.threads' || '' }}"
-          path: ${{ github.workspace }}/bin/${{ matrix.target.platform }}/**
+          name: ${{env.PLUGIN_NAME}}.${{ matrix.target.platform }}.${{matrix.target-type}}.${{ matrix.target.arch }}.${{ matrix.float-precision }}${{ (matrix.target.platform == 'web' && matrix.target.threads == 'enabled') && '.threads' || '' }}
+          path: ${{ github.workspace }}/bin
 
   merge:
     runs-on: ubuntu-22.04
     needs: build
-    env:
-      PLUGIN_NAME: plugin_name_goes_here
     steps:
-      - name: Checkout
-        uses: actions/checkout@v4
-
-      - name: Install GitHub CLI
-        run: sudo apt-get install -y gh
-
-      - name: Get artifact names
-        id: artifact_list
-        uses: actions/github-script@v7
+      - name: Merge Artifacts
+        uses: actions/upload-artifact/merge@v4
         with:
-          script: |
-            const artifacts = await github.rest.actions.listWorkflowRunArtifacts({
-              owner: context.repo.owner,
-              repo: context.repo.repo,
-              run_id: context.runId
-            });
-            return artifacts.data.artifacts.map(a => a.name).join("\n");
+          name: unzip-me
+          pattern: ${{env.PLUGIN_NAME}}.*
+          delete-merged: true
+      
+      - name: Copy .gdextension file
+        run: cp "test_project/${{ env.PLUGIN_NAME }}/${{ env.PLUGIN_NAME }}.gdextension" "${{ env.PLUGIN_NAME }}/${{ env.PLUGIN_NAME }}.gdextension"
 
-      - name: Create final bin folder
-        run: mkdir -p "${{ env.PLUGIN_NAME }}/bin"
-
-      - name: Download and merge artifacts
-        shell: bash
+      - name: Copy LICENSE.md
         run: |
-          echo "${ARTIFACT_NAMES}" | while read -r name; do
-            [ -z "$name" ] && continue
-            echo "Downloading: $name"
-            tmp_dir="tmp/$name"
-            mkdir -p "$tmp_dir"
-            gh run download ${{ github.run_id }} --name "$name" --dir "$tmp_dir"
+          if [ -f LICENSE.md ]; then
+            cp "LICENSE.md" "${{ env.PLUGIN_NAME }}/LICENSE.md"
+          fi
 
-            # Detect platform from filename (works for ios/macos/web/etc.)
-            platform=$(echo "$name" | grep -Eo 'linux|windows|macos|ios|android|web')
-            if [ -z "$platform" ]; then
-              echo "Could not detect platform for $name" >&2
-              continue
-            fi
+      - name: List final structure
+        run: ls -R "${{ env.PLUGIN_NAME }}"
 
-            target_dir="${{ env.PLUGIN_NAME }}/bin/$platform"
-            mkdir -p "$target_dir"
+      - name: Create zip archive
+        run: zip -r "${{ env.PLUGIN_NAME }}.zip" "${{ env.PLUGIN_NAME }}"
 
-            # Copy exactly, preserving folder structure
-            cp -r "$tmp_dir"/* "$target_dir/"
-          done
-        env:
-          GH_TOKEN: ${{ github.token }}
-          ARTIFACT_NAMES: ${{ steps.artifact_list.outputs.result }}
+      - name: Upload final artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: "unzip-me"
+          path: "${{ env.PLUGIN_NAME }}.zip"
+
 
