@@ -98,32 +98,39 @@ jobs:
         if: ${{ matrix.target.platform != 'web' && matrix.target.platform != 'ios' && matrix.target.platform != 'android' }}
         run: |
           GODOT_BINARY_URL="https://github.com/godotengine/godot/releases/download/${{ env.GODOT_VERSION }}-stable/Godot_v${{ env.GODOT_VERSION }}-stable_${{ matrix.target.platform == 'windows' && matrix.target.arch == 'x86_32' && 'win32.exe.zip' || matrix.target.platform == 'windows' && matrix.target.arch == 'x86_64' && 'win64.exe.zip' || matrix.target.platform == 'windows' && matrix.target.arch == 'arm64' && 'windows_arm64.exe.zip' || matrix.target.platform == 'macos' && 'macos.universal.zip' || matrix.target.platform == 'linux' && matrix.target.arch == 'x86_32' && 'linux.x86_32.zip' || matrix.target.platform == 'linux' && matrix.target.arch == 'x86_64' && 'linux.x86_64.zip' || matrix.target.platform == 'linux' && matrix.target.arch == 'arm32' && 'linux.arm32.zip' || matrix.target.platform == 'linux' && matrix.target.arch == 'arm64' && 'linux.arm64.zip' }}"
+          mkdir -p "${{ github.workspace }}/godot_engine"
+          # Download to fixed name in godot_engine/
           for attempt in {1..3}; do
-            wget --tries=1 --timeout=30 "$GODOT_BINARY_URL" -O godot.zip && break
+            wget --tries=1 --timeout=30 "$GODOT_BINARY_URL" -O "${{ github.workspace }}/godot_engine/godotengineexecutable.zip" && break
             echo "Download attempt $attempt failed, retrying..."
             sleep 5
           done
-          unzip godot.zip
-          # Find the Godot binary or app directory (case-insensitive)
-          GODOT_ITEM=$(find "${{ github.workspace }}" -maxdepth 1 -iname '*Godot*' | head -n 1)
-          GODOT_COUNT=$(find "${{ github.workspace }}" -maxdepth 1 -iname '*Godot*' | wc -l)
-          if [ "$GODOT_COUNT" -ne 1 ]; then
-            echo "Error: Expected exactly one item containing 'Godot' in ${{ github.workspace }}, found $GODOT_COUNT"
+          unzip "${{ github.workspace }}/godot_engine/godotengineexecutable.zip" -d "${{ github.workspace }}/godot_engine"
+          # Set executable path and rename
+          if [ "${{ matrix.target.platform }}" = "macos" ]; then
+            mv "${{ github.workspace }}/godot_engine/Godot.app/Contents/MacOS/Godot" "${{ github.workspace }}/godot_engine/Godot.app/Contents/MacOS/godotengineexecutable"
+            GODOT_EXEC_PATH="${{ github.workspace }}/godot_engine/Godot.app/Contents/MacOS/godotengineexecutable"
+            chmod +x "$GODOT_EXEC_PATH"
+          elif [ "${{ matrix.target.platform }}" = "windows" ]; then
+            GODOT_EXEC_PATH="${{ github.workspace }}/godot_engine/godotengineexecutable.exe"
+            mv "${{ github.workspace }}/godot_engine/Godot_v${{ env.GODOT_VERSION }}-stable_${{ matrix.target.arch == 'x86_32' && 'win32.exe' || matrix.target.arch == 'x86_64' && 'win64.exe' || 'windows_arm64.exe' }}" "$GODOT_EXEC_PATH"
+          else
+            GODOT_EXEC_PATH="${{ github.workspace }}/godot_engine/godotengineexecutable"
+            mv "${{ github.workspace }}/godot_engine/Godot_v${{ env.GODOT_VERSION }}-stable_${{ matrix.target.arch == 'x86_32' && 'linux.x86_32' || matrix.target.arch == 'x86_64' && 'linux.x86_64' || matrix.target.arch == 'arm32' && 'linux.arm32' || 'linux.arm64' }}" "$GODOT_EXEC_PATH"
+            chmod +x "$GODOT_EXEC_PATH"
+          fi
+          if [ ! -f "$GODOT_EXEC_PATH" ]; then
+            echo "Error: Godot executable not found at $GODOT_EXEC_PATH"
             exit 1
           fi
-          if [ "${{ matrix.target.platform }}" = "macos" ]; then
-            GODOT_EXEC_PATH="$GODOT_ITEM/Contents/MacOS/Godot"
-            chmod +x "$GODOT_EXEC_PATH"
-            echo "GODOT_EXECUTABLE=$GODOT_EXEC_PATH" >> $GITHUB_ENV
-          else
-            GODOT_EXEC_PATH="${{ github.workspace }}/godot${{ matrix.target.platform == 'windows' && '.exe' || '' }}"
-            mv "$GODOT_ITEM" "$GODOT_EXEC_PATH"
-            chmod +x "$GODOT_EXEC_PATH"
-            echo "GODOT_EXECUTABLE=$GODOT_EXEC_PATH" >> $GITHUB_ENV
-          fi
-          # Verify test project directory
+          echo "GODOT_EXECUTABLE=$GODOT_EXEC_PATH" >> $GITHUB_ENV
+          # Verify test project and scene
           if [ ! -f "${{ github.workspace }}/test_project/project.godot" ]; then
             echo "Error: Test project directory ${{ github.workspace }}/test_project/project.godot not found"
+            exit 1
+          fi
+          if [ ! -f "${{ github.workspace }}/test_project/plugin-tests/plugin-tests.tscn" ]; then
+            echo "Error: Test scene ${{ github.workspace }}/test_project/plugin-tests/plugin-tests.tscn not found"
             exit 1
           fi
         shell: bash
@@ -132,7 +139,7 @@ jobs:
         if: ${{ matrix.target.platform != 'web' && matrix.target.platform != 'ios' && matrix.target.platform != 'android' }}
         run: |
           "${GODOT_EXECUTABLE}" --headless --path "${{ github.workspace }}/test_project" "${{ github.workspace }}/test_project/plugin-tests/plugin-tests.tscn"
-
+        
       # Upload the build
       - name: Upload Artifact
         uses: actions/upload-artifact@v4
