@@ -42,6 +42,12 @@ opts.Add('include_dirs', 'List of include directories (comma-separated)', 'inclu
 opts.Add('doc_output_dir', 'Directory for documentation output', 'gen')
 opts.Add('precision', 'Floating-point precision (single or double)', 'single')  # Default to single
 opts.Add('bundle_id_prefix', 'Bundle identifier prefix (reverse-DNS format)', 'com.gdextension')  # Default prefix
+opts.Add(EnumVariable(
+    'threads',
+    'Enable threads for web builds',
+    'no',  # default
+    allowed_values=('yes', 'no', 'true', 'false')
+))
 
 # Update the environment with the options
 opts.Update(env)
@@ -85,7 +91,7 @@ if env.get("target") in ["editor", "template_debug"]:
 
 # Determine suffixes based on env (align with godot-cpp conventions)
 arch_suffix = f".{env['arch']}" if env['arch'] and env['arch'] != 'universal' else ''
-threads_suffix = '.threads' if env['platform'] == 'web' and env.get('threads') in ['yes', 'true'] else ''
+threads_suffix = '.threads' if env['platform'] == 'web' and env['threads'] in ['yes', 'true'] else ''
 suffix = f".{env['platform']}.{env['target']}{arch_suffix}{threads_suffix}.{precision}"
 lib_filename = f"{env.subst('$SHLIBPREFIX')}{libname}{suffix}{env.subst('$SHLIBSUFFIX')}"
 
