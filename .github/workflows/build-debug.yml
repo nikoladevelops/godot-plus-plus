@@ -93,18 +93,19 @@ jobs:
         shell: pwsh
         run: |
           Remove-Item bin/* -Include *.exp,*.lib,*.pdb -Force
-      - name: Setup Godot
-        if: ${{ matrix.target.platform != 'web' && matrix.target.platform != 'ios' && matrix.target.platform != 'android' }}
+
+      # Platform-specific Setup Godot steps
+      # Note: Some architectures may not have official Godot binaries available (e.g., Linux arm32/arm64/x86_32, Windows arm64 for standard builds).
+      # If downloads fail, consider skipping tests for those or using .NET/Mono variants where available.
+
+      - name: Setup Godot - Linux
+        if: ${{ matrix.target.platform == 'linux' }}
+        shell: bash
         run: |
-          # Convert paths for cross-platform compatibility
-          if [ "${{ matrix.target.platform }}" = "windows" ]; then
-            GODOT_ENGINE_DIR=$(cygpath -u "${{ github.workspace }}\\godot_engine")
-            WORKSPACE=$(cygpath -u "${{ github.workspace }}")
-          else
-            GODOT_ENGINE_DIR="${{ github.workspace }}/godot_engine"
-            WORKSPACE="${{ github.workspace }}"
-          fi
-          GODOT_BINARY_URL="https://github.com/godotengine/godot/releases/download/${{ env.GODOT_VERSION }}-stable/Godot_v${{ env.GODOT_VERSION }}-stable_${{ matrix.target.platform == 'windows' && matrix.target.arch == 'x86_32' && 'win32.exe.zip' || matrix.target.platform == 'windows' && matrix.target.arch == 'x86_64' && 'win64.exe.zip' || matrix.target.platform == 'windows' && matrix.target.arch == 'arm64' && 'windows_arm64.exe.zip' || matrix.target.platform == 'macos' && 'macos.universal.zip' || matrix.target.platform == 'linux' && matrix.target.arch == 'x86_32' && 'linux.x86_32.zip' || matrix.target.platform == 'linux' && matrix.target.arch == 'x86_64' && 'linux.x86_64.zip' || matrix.target.platform == 'linux' && matrix.target.arch == 'arm32' && 'linux.arm32.zip' || matrix.target.platform == 'linux' && matrix.target.arch == 'arm64' && 'linux.arm64.zip' }}"
+          GODOT_ENGINE_DIR="${{ github.workspace }}/godot_engine"
+          WORKSPACE="${{ github.workspace }}"
+          GODOT_BINARY_SUFFIX="linux.${{ matrix.target.arch }}.zip"
+          GODOT_BINARY_URL="https://github.com/godotengine/godot/releases/download/${{ env.GODOT_VERSION }}-stable/Godot_v${{ env.GODOT_VERSION }}-stable_${GODOT_BINARY_SUFFIX}"
           mkdir -p "$GODOT_ENGINE_DIR"
           # Download with curl
           for attempt in {1..3}; do
@@ -122,28 +123,15 @@ jobs:
           echo "Contents of godot_engine/:"
           ls -R "$GODOT_ENGINE_DIR"
           # Find and rename executable
-          if [ "${{ matrix.target.platform }}" = "macos" ]; then
-            GODOT_EXEC_PATH="$GODOT_ENGINE_DIR/Godot.app/Contents/MacOS/godotengineexecutable"
-            mv "$GODOT_ENGINE_DIR/Godot.app/Contents/MacOS/Godot" "$GODOT_EXEC_PATH"
-            chmod +x "$GODOT_EXEC_PATH"
-          elif [ "${{ matrix.target.platform }}" = "windows" ]; then
-            GODOT_EXEC_PATH="$GODOT_ENGINE_DIR/godotengineexecutable.exe"
-            BINARY=$(find "$GODOT_ENGINE_DIR" -maxdepth 1 -type f -name "Godot_v${{ env.GODOT_VERSION }}-stable_${{ matrix.target.arch == 'x86_32' && 'win32.exe' || matrix.target.arch == 'x86_64' && 'win64.exe' || 'windows_arm64.exe' }}")
-            if [ -z "$BINARY" ]; then
-              echo "Error: Windows binary not found"
-              exit 1
-            fi
-            mv "$BINARY" "$GODOT_EXEC_PATH"
-          else
-            GODOT_EXEC_PATH="$GODOT_ENGINE_DIR/godotengineexecutable"
-            BINARY=$(find "$GODOT_ENGINE_DIR" -maxdepth 1 -type f -name "Godot_v${{ env.GODOT_VERSION }}-stable_${{ matrix.target.arch == 'x86_32' && 'linux.x86_32' || matrix.target.arch == 'x86_64' && 'linux.x86_64' || matrix.target.arch == 'arm32' && 'linux.arm32' || 'linux.arm64' }}")
-            if [ -z "$BINARY" ]; then
-              echo "Error: Linux binary not found"
-              exit 1
-            fi
-            mv "$BINARY" "$GODOT_EXEC_PATH"
-            chmod +x "$GODOT_EXEC_PATH"
+          GODOT_EXEC_PATH="$GODOT_ENGINE_DIR/godotengineexecutable"
+          BINARY_SUFFIX="${{ matrix.target.arch == 'x86_32' && 'linux.x86_32' || matrix.target.arch == 'x86_64' && 'linux.x86_64' || matrix.target.arch == 'arm32' && 'linux.arm32' || 'linux.arm64' }}"
+          BINARY=$(find "$GODOT_ENGINE_DIR" -maxdepth 1 -type f -name "Godot_v${{ env.GODOT_VERSION }}-stable_${BINARY_SUFFIX}")
+          if [ -z "$BINARY" ]; then
+            echo "Error: Linux binary not found"
+            exit 1
           fi
+          mv "$BINARY" "$GODOT_EXEC_PATH"
+          chmod +x "$GODOT_EXEC_PATH"
           if [ ! -f "$GODOT_EXEC_PATH" ]; then
             echo "Error: Godot executable not found at $GODOT_EXEC_PATH"
             exit 1
@@ -158,20 +146,123 @@ jobs:
             echo "Error: Test scene $WORKSPACE/test_project/plugin-tests/plugin-tests.tscn not found"
             exit 1
           fi
-        shell: bash
 
-      - name: Test GDExtension (Non-Web)
-        if: ${{ matrix.target.platform != 'web' && matrix.target.platform != 'ios' && matrix.target.platform != 'android' }}
-        run: |
-          if [ "${{ matrix.target.platform }}" = "windows" ]; then
-            TEST_PROJECT_PATH=$(cygpath -u "${{ github.workspace }}\\test_project")
-            TEST_SCENE_PATH=$(cygpath -u "${{ github.workspace }}\\test_project\\plugin-tests\\plugin-tests.tscn")
-          else
-            TEST_PROJECT_PATH="${{ github.workspace }}/test_project"
-            TEST_SCENE_PATH="${{ github.workspace }}/test_project/plugin-tests/plugin-tests.tscn"
-          fi
-          "${GODOT_EXECUTABLE}" --headless --path "$TEST_PROJECT_PATH" "$TEST_SCENE_PATH"
+      - name: Setup Godot - Windows
+        if: ${{ matrix.target.platform == 'windows' }}
         shell: bash
+        run: |
+          GODOT_ENGINE_DIR=$(cygpath -u "${{ github.workspace }}\\godot_engine")
+          WORKSPACE=$(cygpath -u "${{ github.workspace }}")
+          GODOT_BINARY_SUFFIX="${{ matrix.target.arch == 'x86_32' && 'win32.exe.zip' || matrix.target.arch == 'x86_64' && 'win64.exe.zip' || 'windows_arm64.exe.zip' }}"
+          GODOT_BINARY_URL="https://github.com/godotengine/godot/releases/download/${{ env.GODOT_VERSION }}-stable/Godot_v${{ env.GODOT_VERSION }}-stable_${GODOT_BINARY_SUFFIX}"
+          mkdir -p "$GODOT_ENGINE_DIR"
+          # Download with curl
+          for attempt in {1..3}; do
+            curl -L --retry 3 --connect-timeout 30 "$GODOT_BINARY_URL" -o "$GODOT_ENGINE_DIR/godotengineexecutable.zip" && break
+            echo "Download attempt $attempt failed, retrying..."
+            sleep 5
+          done
+          if [ ! -f "$GODOT_ENGINE_DIR/godotengineexecutable.zip" ]; then
+            echo "Error: Failed to download Godot binary"
+            exit 1
+          fi
+          unzip "$GODOT_ENGINE_DIR/godotengineexecutable.zip" -d "$GODOT_ENGINE_DIR"
+          # Debug: List contents
+          echo "Current directory: $(pwd)"
+          echo "Contents of godot_engine/:"
+          ls -R "$GODOT_ENGINE_DIR"
+          # Find and rename executable
+          GODOT_EXEC_PATH="$GODOT_ENGINE_DIR/godotengineexecutable.exe"
+          BINARY_SUFFIX="${{ matrix.target.arch == 'x86_32' && 'win32.exe' || matrix.target.arch == 'x86_64' && 'win64.exe' || 'windows_arm64.exe' }}"
+          BINARY=$(find "$GODOT_ENGINE_DIR" -maxdepth 1 -type f -name "Godot_v${{ env.GODOT_VERSION }}-stable_${BINARY_SUFFIX}")
+          if [ -z "$BINARY" ]; then
+            echo "Error: Windows binary not found"
+            exit 1
+          fi
+          mv "$BINARY" "$GODOT_EXEC_PATH"
+          if [ ! -f "$GODOT_EXEC_PATH" ]; then
+            echo "Error: Godot executable not found at $GODOT_EXEC_PATH"
+            exit 1
+          fi
+          echo "GODOT_EXECUTABLE=$GODOT_EXEC_PATH" >> $GITHUB_ENV
+          # Verify test project and scene
+          if [ ! -f "$WORKSPACE/test_project/project.godot" ]; then
+            echo "Error: Test project directory $WORKSPACE/test_project/project.godot not found"
+            exit 1
+          fi
+          if [ ! -f "$WORKSPACE/test_project/plugin-tests/plugin-tests.tscn" ]; then
+            echo "Error: Test scene $WORKSPACE/test_project/plugin-tests/plugin-tests.tscn not found"
+            exit 1
+          fi
+
+      - name: Setup Godot - macOS
+        if: ${{ matrix.target.platform == 'macos' }}
+        shell: bash
+        run: |
+          GODOT_ENGINE_DIR="${{ github.workspace }}/godot_engine"
+          WORKSPACE="${{ github.workspace }}"
+          GODOT_BINARY_SUFFIX="macos.universal.zip"
+          GODOT_BINARY_URL="https://github.com/godotengine/godot/releases/download/${{ env.GODOT_VERSION }}-stable/Godot_v${{ env.GODOT_VERSION }}-stable_${GODOT_BINARY_SUFFIX}"
+          mkdir -p "$GODOT_ENGINE_DIR"
+          # Download with curl
+          for attempt in {1..3}; do
+            curl -L --retry 3 --connect-timeout 30 "$GODOT_BINARY_URL" -o "$GODOT_ENGINE_DIR/godotengineexecutable.zip" && break
+            echo "Download attempt $attempt failed, retrying..."
+            sleep 5
+          done
+          if [ ! -f "$GODOT_ENGINE_DIR/godotengineexecutable.zip" ]; then
+            echo "Error: Failed to download Godot binary"
+            exit 1
+          fi
+          unzip "$GODOT_ENGINE_DIR/godotengineexecutable.zip" -d "$GODOT_ENGINE_DIR"
+          # Debug: List contents
+          echo "Current directory: $(pwd)"
+          echo "Contents of godot_engine/:"
+          ls -R "$GODOT_ENGINE_DIR"
+          # Find and rename executable
+          GODOT_EXEC_PATH="$GODOT_ENGINE_DIR/Godot.app/Contents/MacOS/godotengineexecutable"
+          mv "$GODOT_ENGINE_DIR/Godot.app/Contents/MacOS/Godot" "$GODOT_EXEC_PATH"
+          chmod +x "$GODOT_EXEC_PATH"
+          if [ ! -f "$GODOT_EXEC_PATH" ]; then
+            echo "Error: Godot executable not found at $GODOT_EXEC_PATH"
+            exit 1
+          fi
+          echo "GODOT_EXECUTABLE=$GODOT_EXEC_PATH" >> $GITHUB_ENV
+          # Verify test project and scene
+          if [ ! -f "$WORKSPACE/test_project/project.godot" ]; then
+            echo "Error: Test project directory $WORKSPACE/test_project/project.godot not found"
+            exit 1
+          fi
+          if [ ! -f "$WORKSPACE/test_project/plugin-tests/plugin-tests.tscn" ]; then
+            echo "Error: Test scene $WORKSPACE/test_project/plugin-tests/plugin-tests.tscn not found"
+            exit 1
+          fi
+
+      # Platform-specific Test GDExtension steps
+
+      - name: Test GDExtension - Linux
+        if: ${{ matrix.target.platform == 'linux' }}
+        shell: bash
+        run: |
+          TEST_PROJECT_PATH="${{ github.workspace }}/test_project"
+          TEST_SCENE_PATH="${{ github.workspace }}/test_project/plugin-tests/plugin-tests.tscn"
+          "${GODOT_EXECUTABLE}" --headless --path "$TEST_PROJECT_PATH" "$TEST_SCENE_PATH"
+
+      - name: Test GDExtension - Windows
+        if: ${{ matrix.target.platform == 'windows' }}
+        shell: bash
+        run: |
+          TEST_PROJECT_PATH=$(cygpath -u "${{ github.workspace }}\\test_project")
+          TEST_SCENE_PATH=$(cygpath -u "${{ github.workspace }}\\test_project\\plugin-tests\\plugin-tests.tscn")
+          "${GODOT_EXECUTABLE}" --headless --path "$TEST_PROJECT_PATH" "$TEST_SCENE_PATH"
+
+      - name: Test GDExtension - macOS
+        if: ${{ matrix.target.platform == 'macos' }}
+        shell: bash
+        run: |
+          TEST_PROJECT_PATH="${{ github.workspace }}/test_project"
+          TEST_SCENE_PATH="${{ github.workspace }}/test_project/plugin-tests/plugin-tests.tscn"
+          "${GODOT_EXECUTABLE}" --headless --path "$TEST_PROJECT_PATH" "$TEST_SCENE_PATH"
 
       # Upload the build
       - name: Upload Artifact
