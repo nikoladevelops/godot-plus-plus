@@ -104,13 +104,34 @@ jobs:
             sleep 5
           done
           unzip godot.zip
-          mv Godot_v${{ env.GODOT_VERSION }}-stable_* godot
+          # Find the Godot binary or app directory (case-insensitive)
+          GODOT_ITEM=$(find "${{ github.workspace }}" -maxdepth 1 -iname '*Godot*' | head -n 1)
+          GODOT_COUNT=$(find "${{ github.workspace }}" -maxdepth 1 -iname '*Godot*' | wc -l)
+          if [ "$GODOT_COUNT" -ne 1 ]; then
+            echo "Error: Expected exactly one item containing 'Godot' in ${{ github.workspace }}, found $GODOT_COUNT"
+            exit 1
+          fi
+          if [ "${{ matrix.target.platform }}" = "macos" ]; then
+            GODOT_EXEC_PATH="$GODOT_ITEM/Contents/MacOS/Godot"
+            chmod +x "$GODOT_EXEC_PATH"
+            echo "GODOT_EXECUTABLE=$GODOT_EXEC_PATH" >> $GITHUB_ENV
+          else
+            GODOT_EXEC_PATH="${{ github.workspace }}/godot${{ matrix.target.platform == 'windows' && '.exe' || '' }}"
+            mv "$GODOT_ITEM" "$GODOT_EXEC_PATH"
+            chmod +x "$GODOT_EXEC_PATH"
+            echo "GODOT_EXECUTABLE=$GODOT_EXEC_PATH" >> $GITHUB_ENV
+          fi
+          # Verify test project directory
+          if [ ! -f "${{ github.workspace }}/test_project/project.godot" ]; then
+            echo "Error: Test project directory ${{ github.workspace }}/test_project/project.godot not found"
+            exit 1
+          fi
         shell: bash
 
       - name: Test GDExtension (Non-Web)
         if: ${{ matrix.target.platform != 'web' && matrix.target.platform != 'ios' && matrix.target.platform != 'android' }}
         run: |
-          ./godot --headless --path test_project res://plugin-tests/plugin-tests.tscn
+          "${GODOT_EXECUTABLE}" --headless --path "${{ github.workspace }}/test_project" "${{ github.workspace }}/test_project/plugin-tests/plugin-tests.tscn"
 
       # Upload the build
       - name: Upload Artifact
