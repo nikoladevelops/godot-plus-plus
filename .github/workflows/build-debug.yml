@@ -1,4 +1,4 @@
-name: Build GDExtension (Debug)
+name: Build GDExtension CROSS PLATFORM PLUGIN
 on:
   workflow_dispatch:
 
@@ -58,7 +58,7 @@ jobs:
           scons-cache: ${{ github.workspace }}/.scons-cache/
           cache-name: ${{ matrix.target.platform }}_${{ matrix.target.arch }}_${{ matrix.float-precision }}_${{ matrix.target-type }}${{ (matrix.target.platform == 'web' && matrix.target.threads == 'enabled') && '.threads' || '' }}
 
-      - name: Build GDExtension Debug Build
+      - name: Build GDExtension
         shell: sh
         env:
           SCONS_CACHE: ${{ github.workspace }}/.scons-cache/
@@ -87,7 +87,7 @@ jobs:
       - name: Upload Artifact
         uses: actions/upload-artifact@v4
         with:
-          name: bin-${{ matrix.target.platform }}-${{ matrix.target.arch }}${{ (matrix.target.platform == 'web' && matrix.target.threads == 'enabled') && '.threads' || '' }}
+          name: ${{ matrix.target.platform }}
           path: bin/${{ matrix.target.platform }}
 
   merge:
@@ -97,7 +97,12 @@ jobs:
       - name: Checkout
         uses: actions/checkout@v4
 
-      - name: Download all artifacts (preserve folder structure)
+      - name: Create fresh bin folder
+        run: |
+          rm -rf bin
+          mkdir -p bin
+
+      - name: Download all artifacts
         uses: actions/download-artifact@v4
         with:
           merge-multiple: true
