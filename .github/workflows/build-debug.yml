@@ -15,8 +15,8 @@ jobs:
         # See https://docs.github.com/en/actions/writing-workflows/choosing-what-your-workflow-does/running-variations-of-jobs-in-a-workflow
         target:
           [
-          #  { platform: linux, arch: x86_32, os: ubuntu-22.04 },
-          #  { platform: linux, arch: x86_64, os: ubuntu-22.04 },
+            { platform: linux, arch: x86_32, os: ubuntu-22.04 },
+            { platform: linux, arch: x86_64, os: ubuntu-22.04 },
           #  { platform: linux, arch: arm32, os: ubuntu-22.04-arm },
           #  { platform: linux, arch: arm64, os: ubuntu-22.04-arm },
           #  { platform: windows, arch: x86_32, os: windows-latest },
@@ -138,5 +138,5 @@ jobs:
       - name: Upload final artifact
         uses: actions/upload-artifact@v4
         with:
-          name: "${{ env.PLUGIN_NAME }}"
+          name: "unzip-me"
           path: "${{ env.PLUGIN_NAME }}.zip"
