@@ -24,7 +24,30 @@ env:
   PLUGIN_NAME: "plugin_name_goes_here" # Replace with your plugin name (must match .gdextension file name)
 
 jobs:
+  set-matrix:
+    runs-on: ubuntu-22.04
+    outputs:
+      target_types: ${{ steps.set-matrix.outputs.target_types }}
+      float_precisions: ${{ steps.set-matrix.outputs.float_precisions }}
+    steps:
+      - name: Set matrix values
+        id: set-matrix
+        run: |
+          if [ "${{ github.event.inputs.build_type }}" = "full_plugin_compilation" ]; then
+            TARGET_TYPES='["template_debug", "template_release"]'
+          else
+            TARGET_TYPES='["template_debug"]'
+          fi
+          if [ "${{ github.event.inputs.precision }}" = "both" ]; then
+            FLOAT_PRECISIONS='["single", "double"]'
+          else
+            FLOAT_PRECISIONS='["${{ github.event.inputs.precision }}"]'
+          fi
+          echo "target_types=$TARGET_TYPES" >> $GITHUB_OUTPUT
+          echo "float_precisions=$FLOAT_PRECISIONS" >> $GITHUB_OUTPUT
+
   build:
+    needs: set-matrix
     strategy:
       fail-fast: false
       matrix:
@@ -48,8 +71,8 @@ jobs:
             { platform: web, arch: wasm32, os: ubuntu-22.04, threads: "no" },
             { platform: web, arch: wasm32, os: ubuntu-22.04, threads: "yes" }
           ]
-        target-type: ${{ github.event.inputs.build_type == 'full_plugin_compilation' && '[template_debug, template_release]' || '[template_debug]' }}
-        float-precision: ${{ github.event.inputs.precision == 'both' && '[single, double]' || format('[{0}]', github.event.inputs.precision) }}
+        target-type: ${{ fromJson(needs.set-matrix.outputs.target_types) }}
+        float-precision: ${{ fromJson(needs.set-matrix.outputs.float_precisions) }}
 
     runs-on: ${{ matrix.target.os }}
     steps:
