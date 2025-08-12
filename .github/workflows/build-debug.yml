@@ -88,26 +88,23 @@ jobs:
         uses: actions/upload-artifact@v4
         with:
           name: ${{ matrix.target.platform }}.${{ matrix.target.arch }}.${{ matrix.float-precision }}.${{ matrix.target-type }}${{ (matrix.target.platform == 'web' && matrix.target.threads == 'enabled') && '.threads' || '' }}
-          path: ${{ github.workspace }}/bin/**
+          path: ${{ github.workspace }}/bin/${{ matrix.target.platform }}/**
 
   merge:
     runs-on: ubuntu-22.04
     needs: build
     env:
-      PLUGIN_NAME: plugin_name_goes_here # Make sure this matches your env var
+      PLUGIN_NAME: plugin_name_goes_here # Must match the .gdextension file name
     steps:
       - name: Checkout
         uses: actions/checkout@v4
 
       - name: Create artifacts directory
-        # The script will create the final plugin structure dynamically
         run: mkdir -p artifacts
 
       - name: Download all build artifacts
         uses: actions/download-artifact@v4
         with:
-          # No 'name' is specified, so all artifacts from the workflow run will be downloaded.
-          # Each artifact will be placed in a separate directory inside 'artifacts/'.
           path: artifacts
 
       - name: List downloaded files for debugging
@@ -115,31 +112,27 @@ jobs:
 
       - name: Organize artifacts by platform
         run: |
-          # Create the top-level plugin directory that will be zipped
-          mkdir -p ${{ env.PLUGIN_NAME }}/bin
-          
-          # Loop through each downloaded artifact directory inside 'artifacts'
+          # Create plugin/bin structure
+          mkdir -p "${{ env.PLUGIN_NAME }}/bin"
+
+          # Loop through each artifact folder
           for artifact_dir in artifacts/*/; do
-            # Remove trailing slash to get the directory name, which is the artifact name
             artifact_name=$(basename "$artifact_dir")
-            
-            # Extract platform name (the part before the first '.')
+
+            # Platform = first part before "."
             platform=$(echo "$artifact_name" | cut -d'.' -f1)
-            
-            # Define the target directory for this platform's binaries
+
             target_dir="${{ env.PLUGIN_NAME }}/bin/$platform"
-            
-            echo "Creating target directory: $target_dir"
+            echo "Creating $target_dir"
             mkdir -p "$target_dir"
-            
-            # Copy all files from the downloaded artifact directory to the new platform-specific directory
-            echo "Copying files from $artifact_dir to $target_dir"
-            cp -r "$artifact_dir"* "$target_dir/"
+
+            # Copy everything (files + subfolders) into the platform folder
+            find "$artifact_dir" -mindepth 1 -maxdepth 1 -exec cp -r {} "$target_dir/" \;
           done
 
       - name: Copy .gdextension file
         run: cp "test_project/${{ env.PLUGIN_NAME }}/${{ env.PLUGIN_NAME }}.gdextension" "${{ env.PLUGIN_NAME }}/${{ env.PLUGIN_NAME }}.gdextension"
-        
+
       - name: Copy LICENSE.md
         run: |
           if [ -f LICENSE.md ]; then
@@ -147,10 +140,10 @@ jobs:
           fi
 
       - name: List final bin contents for debugging
-        run: ls -R ${{ env.PLUGIN_NAME }}
+        run: ls -R "${{ env.PLUGIN_NAME }}"
 
       - name: Create zip archive
-        run: zip -r ${{ env.PLUGIN_NAME }}.zip ${{ env.PLUGIN_NAME }}
+        run: zip -r "${{ env.PLUGIN_NAME }}.zip" "${{ env.PLUGIN_NAME }}"
 
       - name: Upload final artifact
         uses: actions/upload-artifact@v4
