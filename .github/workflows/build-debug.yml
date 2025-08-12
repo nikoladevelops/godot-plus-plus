@@ -1,6 +1,13 @@
 name: Build GDExtension (Debug)
 on:
   workflow_dispatch:
+    inputs:
+      godot_version:
+        description: 'Godot version (e.g., 4.4.1, 4.4, 4.3, 4.5-beta4)'
+        default: '4.4.1'
+
+env:
+  GODOT_VERSION: ${{ github.event.inputs.godot_version || '4.4.1' }}  # Default to 4.4.1
 
 jobs:
   build:
@@ -61,8 +68,6 @@ jobs:
           platform: ${{ matrix.target.platform }}
           em-version: 3.1.62
 
-      # Build GDExtension (with caches)
-
       - name: Restore .scons_cache
         uses: ./godot-cpp/.github/actions/godot-cache-restore
         with:
@@ -88,6 +93,24 @@ jobs:
         shell: pwsh
         run: |
           Remove-Item bin/* -Include *.exp,*.lib,*.pdb -Force
+      # Setup for tests
+      - name: Setup Godot
+        if: ${{ matrix.target.platform != 'web' && matrix.target.platform != 'ios' && matrix.target.platform != 'android' }}
+        run: |
+          GODOT_BINARY_URL="https://github.com/godotengine/godot/releases/download/${{ env.GODOT_VERSION }}-stable/Godot_v${{ env.GODOT_VERSION }}-stable_${{ matrix.target.platform == 'windows' && matrix.target.arch == 'x86_32' && 'win32.exe.zip' || matrix.target.platform == 'windows' && matrix.target.arch == 'x86_64' && 'win64.exe.zip' || matrix.target.platform == 'windows' && matrix.target.arch == 'arm64' && 'windows_arm64.exe.zip' || matrix.target.platform == 'macos' && 'macos.universal.zip' || matrix.target.platform == 'linux' && matrix.target.arch == 'x86_32' && 'linux.x86_32.zip' || matrix.target.platform == 'linux' && matrix.target.arch == 'x86_64' && 'linux.x86_64.zip' || matrix.target.platform == 'linux' && matrix.target.arch == 'arm32' && 'linux.arm32.zip' || matrix.target.platform == 'linux' && matrix.target.arch == 'arm64' && 'linux.arm64.zip' }}"
+          for attempt in {1..3}; do
+            wget --tries=1 --timeout=30 "$GODOT_BINARY_URL" -O godot.zip && break
+            echo "Download attempt $attempt failed, retrying..."
+            sleep 5
+          done
+          unzip godot.zip
+          mv Godot_v${{ env.GODOT_VERSION }}-stable_* godot
+        shell: bash
+
+      - name: Test GDExtension (Non-Web)
+        if: ${{ matrix.target.platform != 'web' && matrix.target.platform != 'ios' && matrix.target.platform != 'android' }}
+        run: |
+          ./godot --headless --path test_project res://plugin-tests/plugin-tests.tscn
 
       # Upload the build
       - name: Upload Artifact
