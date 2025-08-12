@@ -120,7 +120,7 @@ jobs:
 
       - name: Copy LICENSE.md if exists
         run: |
-          if [ -f "LICENSE.md" ]; then
+          if [ -f "LICENSE.md" ] && [ "$(realpath LICENSE.md)" != "$(realpath ./LICENSE.md)" ]; then
             cp LICENSE.md ./
           fi
 
