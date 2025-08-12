@@ -3,7 +3,7 @@ on:
   workflow_dispatch:
 
 env:
-  PLUGIN_NAME: "plugin_name" # Replace with your plugin name  (should be same as .gdextension file name)
+  PLUGIN_NAME: "plugin_name_goes_here" # Replace with your plugin name (must match .gdextension file name)
 
 jobs:
   build:
@@ -35,23 +35,11 @@ jobs:
 
     runs-on: ${{ matrix.target.os }}
     steps:
-      # Clone this repository
       - name: Checkout
         uses: actions/checkout@v4
         with:
           submodules: true
 
-      # Lint
-      #- name: Setup clang-format
-      #  shell: bash
-      #  run: |
-      #    python -m pip install clang-format
-      #- name: Run clang-format
-      #  shell: bash
-      #  run: |
-      #    clang-format src/** --dry-run --Werror
-
-      # Add linux x86_32 toolchain
       - name: Install multilib support
         if: ${{ matrix.target.platform == 'linux' && matrix.target.arch == 'x86_32' }}
         run: |
@@ -110,7 +98,6 @@ jobs:
       - name: Download all artifacts
         uses: actions/download-artifact@v4
         with:
-          pattern: "${{ env.PLUGIN_NAME }}-*"
           merge-multiple: true
           path: bin
 
@@ -120,13 +107,13 @@ jobs:
 
       - name: Copy LICENSE.md if exists
         run: |
-          if [ -f "LICENSE.md" ] && [ "$(realpath LICENSE.md)" != "$(realpath ./LICENSE.md)" ]; then
+          if [ -f "LICENSE.md" ]; then
             cp LICENSE.md ./
           fi
 
       - name: Create final zip
         run: |
-          zip -r "${{ env.PLUGIN_NAME }}.zip" bin "${{ env.PLUGIN_NAME }}.gdextension" LICENSE.md || zip -r "${{ env.PLUGIN_NAME }}.zip" bin "${{ env.PLUGIN_NAME }}.gdextension"
+          zip -r "${{ env.PLUGIN_NAME }}.zip" bin "${{ env.PLUGIN_NAME }}.gdextension" $( [ -f LICENSE.md ] && echo LICENSE.md )
 
       - name: Upload final zip
         uses: actions/upload-artifact@v4
