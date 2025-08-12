@@ -94,41 +94,42 @@ jobs:
     runs-on: ubuntu-22.04
     needs: build
     env:
-      PLUGIN_NAME: plugin_name_goes_here # Must match the .gdextension file name
+      PLUGIN_NAME: plugin_name_goes_here
     steps:
       - name: Checkout
         uses: actions/checkout@v4
 
-      - name: Create artifacts directory
-        run: mkdir -p artifacts
-
-      - name: Download all build artifacts
-        uses: actions/download-artifact@v4
+      - name: Get list of all artifact names
+        id: artifact_list
+        uses: actions/github-script@v7
         with:
-          path: artifacts
+          script: |
+            const artifacts = await github.rest.actions.listWorkflowRunArtifacts({
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              run_id: context.runId
+            });
+            return artifacts.data.artifacts.map(a => a.name);
 
-      - name: List downloaded files for debugging
-        run: ls -R artifacts
+      - name: Create base bin directory
+        run: mkdir -p "${{ env.PLUGIN_NAME }}/bin"
 
-      - name: Organize artifacts by platform
+      - name: Download and organize each artifact
         run: |
-          # Create plugin/bin structure
-          mkdir -p "${{ env.PLUGIN_NAME }}/bin"
+          for name in ${{ steps.artifact_list.outputs.result }}; do
+            echo "Downloading artifact: $name"
+            mkdir -p "tmp/$name"
+            gh run download ${{ github.run_id }} --name "$name" --dir "tmp/$name"
 
-          # Loop through each artifact folder
-          for artifact_dir in artifacts/*/; do
-            artifact_name=$(basename "$artifact_dir")
-
-            # Platform = first part before "."
-            platform=$(echo "$artifact_name" | cut -d'.' -f1)
-
+            platform=$(echo "$name" | cut -d'.' -f1)
             target_dir="${{ env.PLUGIN_NAME }}/bin/$platform"
-            echo "Creating $target_dir"
             mkdir -p "$target_dir"
 
-            # Copy everything (files + subfolders) into the platform folder
-            find "$artifact_dir" -mindepth 1 -maxdepth 1 -exec cp -r {} "$target_dir/" \;
+            echo "Copying files from tmp/$name to $target_dir"
+            cp -r tmp/$name/* "$target_dir/"
           done
+        env:
+          GH_TOKEN: ${{ github.token }}
 
       - name: Copy .gdextension file
         run: cp "test_project/${{ env.PLUGIN_NAME }}/${{ env.PLUGIN_NAME }}.gdextension" "${{ env.PLUGIN_NAME }}/${{ env.PLUGIN_NAME }}.gdextension"
@@ -139,7 +140,7 @@ jobs:
             cp "LICENSE.md" "${{ env.PLUGIN_NAME }}/LICENSE.md"
           fi
 
-      - name: List final bin contents for debugging
+      - name: List final structure
         run: ls -R "${{ env.PLUGIN_NAME }}"
 
       - name: Create zip archive
@@ -150,3 +151,4 @@ jobs:
         with:
           name: "unzip-me"
           path: "${{ env.PLUGIN_NAME }}.zip"
+
