@@ -114,6 +114,7 @@ jobs:
         run:
           if [ -f LICENSE.md ]; then
             cp "LICENSE.md" "${{ env.PLUGIN_NAME }}/LICENSE.md"
+          fi
 
       - name: Upload final zip
         uses: actions/upload-artifact@v4
