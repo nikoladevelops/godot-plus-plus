@@ -3,7 +3,7 @@ on:
   workflow_dispatch:
 
 env:
-  PLUGIN_NAME: "plugin_name_goes_here" # Replace with your plugin name  (should be same as .gdextension file name)
+  PLUGIN_NAME: "plugin_name" # Replace with your plugin name  (should be same as .gdextension file name)
 
 jobs:
   build:
@@ -94,7 +94,7 @@ jobs:
       - name: Upload Artifact
         uses: actions/upload-artifact@v4
         with:
-          name: ${{env.PLUGIN_NAME}}-${{ matrix.target.platform }}-${{ matrix.target.arch }}-${{ matrix.float-precision }}-${{ matrix.target-type }}${{ (matrix.target.threads != null && matrix.target.threads != '') && format('-{0}', matrix.target.threads) || '' }}
+          name: lib${{ env.PLUGIN_NAME }}.${{ matrix.target.platform }}.${{ matrix.target-type }}.${{ matrix.target.arch }}${{ (matrix.target.platform == 'web' && matrix.target.threads == 'enabled') && '.threads' || '' }}.${{ matrix.float-precision }}
           path: |
             ${{ github.workspace }}/bin/**
 
