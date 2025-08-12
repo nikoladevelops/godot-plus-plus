@@ -87,7 +87,14 @@ jobs:
       - name: Upload Artifact
         uses: actions/upload-artifact@v4
         with:
-          name: ${{ matrix.target.platform }}.${{ matrix.target.arch }}.${{ matrix.float-precision }}.${{ matrix.target-type }}${{ (matrix.target.platform == 'web' && matrix.target.threads == 'enabled') && '.threads' || '' }}
+          name: ${{ steps.build.outputs.binary_name }}
+          path: ${{ steps.build.outputs.binary_path }}
+
+      - name: Upload Artifact
+        uses: actions/upload-artifact@v4
+        with:
+          # Exact platform bin folder — preserves real file names
+          name: "${{ env.PLUGIN_NAME }}.${{ matrix.target.platform }}.${{ matrix.target.target-type }}.${{ matrix.target.arch }}.${{ matrix.target.float-precision }}${{ (matrix.target.platform == 'web' && matrix.target.threads == 'enabled') && '.threads' || '' }}"
           path: ${{ github.workspace }}/bin/${{ matrix.target.platform }}/**
 
   merge:
@@ -99,7 +106,10 @@ jobs:
       - name: Checkout
         uses: actions/checkout@v4
 
-      - name: Get list of all artifact names
+      - name: Install GitHub CLI
+        run: sudo apt-get install -y gh
+
+      - name: Get artifact names
         id: artifact_list
         uses: actions/github-script@v7
         with:
@@ -109,46 +119,35 @@ jobs:
               repo: context.repo.repo,
               run_id: context.runId
             });
-            return artifacts.data.artifacts.map(a => a.name);
+            return artifacts.data.artifacts.map(a => a.name).join("\n");
 
-      - name: Create base bin directory
+      - name: Create final bin folder
         run: mkdir -p "${{ env.PLUGIN_NAME }}/bin"
 
-      - name: Download and organize each artifact
+      - name: Download and merge artifacts
+        shell: bash
         run: |
-          for name in ${{ steps.artifact_list.outputs.result }}; do
-            echo "Downloading artifact: $name"
-            mkdir -p "tmp/$name"
-            gh run download ${{ github.run_id }} --name "$name" --dir "tmp/$name"
+          echo "${ARTIFACT_NAMES}" | while read -r name; do
+            [ -z "$name" ] && continue
+            echo "Downloading: $name"
+            tmp_dir="tmp/$name"
+            mkdir -p "$tmp_dir"
+            gh run download ${{ github.run_id }} --name "$name" --dir "$tmp_dir"
 
-            platform=$(echo "$name" | cut -d'.' -f1)
+            # Detect platform from filename (works for ios/macos/web/etc.)
+            platform=$(echo "$name" | grep -Eo 'linux|windows|macos|ios|android|web')
+            if [ -z "$platform" ]; then
+              echo "Could not detect platform for $name" >&2
+              continue
+            fi
+
             target_dir="${{ env.PLUGIN_NAME }}/bin/$platform"
             mkdir -p "$target_dir"
 
-            echo "Copying files from tmp/$name to $target_dir"
-            cp -r tmp/$name/* "$target_dir/"
+            # Copy exactly, preserving folder structure
+            cp -r "$tmp_dir"/* "$target_dir/"
           done
         env:
           GH_TOKEN: ${{ github.token }}
-
-      - name: Copy .gdextension file
-        run: cp "test_project/${{ env.PLUGIN_NAME }}/${{ env.PLUGIN_NAME }}.gdextension" "${{ env.PLUGIN_NAME }}/${{ env.PLUGIN_NAME }}.gdextension"
-
-      - name: Copy LICENSE.md
-        run: |
-          if [ -f LICENSE.md ]; then
-            cp "LICENSE.md" "${{ env.PLUGIN_NAME }}/LICENSE.md"
-          fi
-
-      - name: List final structure
-        run: ls -R "${{ env.PLUGIN_NAME }}"
-
-      - name: Create zip archive
-        run: zip -r "${{ env.PLUGIN_NAME }}.zip" "${{ env.PLUGIN_NAME }}"
-
-      - name: Upload final artifact
-        uses: actions/upload-artifact@v4
-        with:
-          name: "unzip-me"
-          path: "${{ env.PLUGIN_NAME }}.zip"
+          ARTIFACT_NAMES: ${{ steps.artifact_list.outputs.result }}
 
