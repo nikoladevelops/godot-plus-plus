@@ -101,6 +101,17 @@ jobs:
           pattern: ${{env.PLUGIN_NAME}}.*
           delete-merged: true
       
+      - name: Merge platform folders into single bin/<platform>
+        run: |
+          mkdir -p bin
+          for PLATFORM_PATH in bin/*; do
+            [ -d "$PLATFORM_PATH" ] || continue
+            PLATFORM=$(basename "$PLATFORM_PATH")
+            echo "Merging platform: $PLATFORM"
+            find "$PLATFORM_PATH" -mindepth 2 -type f -exec mv -t "$PLATFORM_PATH" {} +
+            find "$PLATFORM_PATH" -mindepth 1 -type d -exec rm -rf {} +
+          done
+
       - name: Copy .gdextension file
         run: cp "test_project/${{ env.PLUGIN_NAME }}/${{ env.PLUGIN_NAME }}.gdextension" "${{ env.PLUGIN_NAME }}/${{ env.PLUGIN_NAME }}.gdextension"
 
@@ -121,5 +132,3 @@ jobs:
         with:
           name: "unzip-me"
           path: "${{ env.PLUGIN_NAME }}.zip"
-
-
