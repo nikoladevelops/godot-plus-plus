@@ -104,9 +104,32 @@ jobs:
     runs-on: ubuntu-22.04
     needs: build
     steps:
-      - name: Merge Artifacts
-        uses: actions/upload-artifact/merge@v4
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Download all artifacts
+        uses: actions/download-artifact@v4
         with:
-          name: ${{env.PLUGIN_NAME}}
-          pattern: ${{env.PLUGIN_NAME}}-*
-          delete-merged: true
+          pattern: "${{ env.PLUGIN_NAME }}-*"
+          merge-multiple: true
+          path: bin
+
+      - name: Copy .gdextension file
+        run: |
+          cp "test_project/${{ env.PLUGIN_NAME }}/${{ env.PLUGIN_NAME }}.gdextension" "./${{ env.PLUGIN_NAME }}.gdextension"
+
+      - name: Copy LICENSE.md if exists
+        run: |
+          if [ -f "LICENSE.md" ]; then
+            cp LICENSE.md ./
+          fi
+
+      - name: Create final zip
+        run: |
+          zip -r "${{ env.PLUGIN_NAME }}.zip" bin "${{ env.PLUGIN_NAME }}.gdextension" LICENSE.md || zip -r "${{ env.PLUGIN_NAME }}.zip" bin "${{ env.PLUGIN_NAME }}.gdextension"
+
+      - name: Upload final zip
+        uses: actions/upload-artifact@v4
+        with:
+          name: "${{ env.PLUGIN_NAME }}"
+          path: "${{ env.PLUGIN_NAME }}.zip"
