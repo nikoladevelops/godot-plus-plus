@@ -109,14 +109,11 @@ jobs:
 
       - name: Copy .gdextension file
         run: cp "test_project/${{ env.PLUGIN_NAME }}/${{ env.PLUGIN_NAME }}.gdextension" "./${{ env.PLUGIN_NAME }}.gdextension"
-
-      - name: Create final zip
-        run: |
+      
+      - name: Copy LICENSE.md
+        run:
           if [ -f LICENSE.md ]; then
-            zip -r "${{ env.PLUGIN_NAME }}.zip" ${{ env.PLUGIN_NAME }} "${{ env.PLUGIN_NAME }}.gdextension" LICENSE.md
-          else
-            zip -r "${{ env.PLUGIN_NAME }}.zip" ${{ env.PLUGIN_NAME }} "${{ env.PLUGIN_NAME }}.gdextension"
-          fi
+            cp LICENSE.md ${{ env.PLUGIN_NAME }}/LICENSE.md || true
 
       - name: Upload final zip
         uses: actions/upload-artifact@v4
