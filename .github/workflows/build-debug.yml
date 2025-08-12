@@ -56,7 +56,7 @@ jobs:
         uses: ./godot-cpp/.github/actions/godot-cache-restore
         with:
           scons-cache: ${{ github.workspace }}/.scons-cache/
-          cache-name: ${{env.PLUGIN_NAME}}.${{ matrix.target.platform }}.${{matrix.target-type}}.${{ matrix.target.arch }}.${{ matrix.float-precision }}${{ (matrix.target.platform == 'web' && matrix.target.threads == 'enabled') && '-threads' || '' }}
+          cache-name: ${{env.PLUGIN_NAME}}.${{ matrix.target.platform }}.${{matrix.target-type}}.${{ matrix.target.arch }}.${{ matrix.float-precision }}${{ (matrix.target.platform == 'web' && matrix.target.threads == 'yes') && '-threads' || '' }}
 
       - name: Build GDExtension
         shell: sh
@@ -87,7 +87,7 @@ jobs:
         uses: ./godot-cpp/.github/actions/godot-cache-save
         with:
           scons-cache: ${{ github.workspace }}/.scons-cache/
-          cache-name: ${{ matrix.target.platform }}_${{ matrix.target.arch }}_${{ matrix.float-precision }}_${{ matrix.target-type }}${{ (matrix.target.platform == 'web' && matrix.target.threads == 'enabled') && '_threads' || '' }}
+          cache-name: ${{ matrix.target.platform }}_${{ matrix.target.arch }}_${{ matrix.float-precision }}_${{ matrix.target-type }}${{ (matrix.target.platform == 'web' && matrix.target.threads == 'yes') && '_threads' || '' }}
 
       - name: Windows - Delete compilation files
         if: ${{ matrix.target.platform == 'windows' }}
@@ -97,7 +97,7 @@ jobs:
       - name: Upload Artifact
         uses: actions/upload-artifact@v4
         with:
-          name: ${{env.PLUGIN_NAME}}.${{ matrix.target.platform }}.${{matrix.target-type}}.${{ matrix.target.arch }}.${{ matrix.float-precision }}${{ (matrix.target.platform == 'web' && matrix.target.threads == 'enabled') && '.threads' || '' }}
+          name: ${{env.PLUGIN_NAME}}.${{ matrix.target.platform }}.${{matrix.target-type}}.${{ matrix.target.arch }}.${{ matrix.float-precision }}${{ (matrix.target.platform == 'web' && matrix.target.threads == 'yes') && '.threads' || '' }}
           path: ${{ github.workspace }}/bin
 
   merge:
