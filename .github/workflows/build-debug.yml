@@ -77,7 +77,7 @@ jobs:
         uses: ./godot-cpp/.github/actions/godot-cache-save
         with:
           scons-cache: ${{ github.workspace }}/.scons-cache/
-          cache-name: ${{ matrix.target.platform }}_${{ matrix.target.arch }}_${{ matrix.float-precision }}_${{ matrix.target-type }}${{ (matrix.target.platform == 'web' && matrix.target.threads == 'enabled') && '.threads' || '' }}
+          cache-name: ${{ matrix.target.platform }}_${{ matrix.target.arch }}_${{ matrix.float-precision }}_${{ matrix.target-type }}${{ (matrix.target.platform == 'web' && matrix.target.threads == 'enabled') && '_threads' || '' }}
 
       - name: Windows - Delete compilation files
         if: ${{ matrix.target.platform == 'windows' }}
@@ -87,8 +87,8 @@ jobs:
       - name: Upload Artifact
         uses: actions/upload-artifact@v4
         with:
-          name: ${{ matrix.target.platform }}
-          path: bin/${{ matrix.target.platform }}
+          name: ${{ matrix.target.platform }}.${{ matrix.target.arch }}.${{ matrix.float-precision }}.${{ matrix.target-type }}${{ (matrix.target.platform == 'web' && matrix.target.threads == 'enabled') && '.threads' || '' }}
+          path: ${{ github.workspace }}/bin/**
 
   merge:
     runs-on: ubuntu-22.04
@@ -97,26 +97,44 @@ jobs:
       - name: Checkout
         uses: actions/checkout@v4
 
-      - name: Create fresh bin folder
+      - name: Create fresh plugin folder
         run: |
-          rm -rf bin
-          mkdir -p bin
+          mkdir -p ${{env.PLUGIN_NAME}}
 
       - name: Download all artifacts
         uses: actions/download-artifact@v4
         with:
           merge-multiple: true
-          path: bin
+          path: ${{ env.PLUGIN_NAME }}
+
+      - name: Flatten and group by platform
+        run: |
+          # Create the top-level bin directory
+          mkdir -p ${{ env.PLUGIN_NAME }}/bin
+          
+          # Find all artifact directories
+          for artifact_dir in ${{ env.PLUGIN_NAME }}/*; do
+            if [ -d "$artifact_dir" ]; then
+              # Extract platform from artifact name (e.g., 'windows' from 'windows.x86_64.single.release')
+              platform=$(basename "$artifact_dir" | cut -d'.' -f1)
+              # Create platform-specific bin subfolder
+              mkdir -p ${{ env.PLUGIN_NAME }}/bin/$platform
+              # Move all files from artifact's bin/ (including subfolders) to platform subfolder
+              find "$artifact_dir/bin" -type f -mindepth 1 -exec mv -n {} ${{ env.PLUGIN_NAME }}/bin/$platform/ \;
+            fi
+          done
+          # Remove empty directories
+          find ${{ env.PLUGIN_NAME }} -type d -empty -delete
 
       - name: Copy .gdextension file
         run: cp "test_project/${{ env.PLUGIN_NAME }}/${{ env.PLUGIN_NAME }}.gdextension" "./${{ env.PLUGIN_NAME }}.gdextension"
 
-      - name: Create final zip (keep bin subfolders intact)
+      - name: Create final zip
         run: |
           if [ -f LICENSE.md ]; then
-            zip -r "${{ env.PLUGIN_NAME }}.zip" bin "${{ env.PLUGIN_NAME }}.gdextension" LICENSE.md
+            zip -r "${{ env.PLUGIN_NAME }}.zip" ${{ env.PLUGIN_NAME }} "${{ env.PLUGIN_NAME }}.gdextension" LICENSE.md
           else
-            zip -r "${{ env.PLUGIN_NAME }}.zip" bin "${{ env.PLUGIN_NAME }}.gdextension"
+            zip -r "${{ env.PLUGIN_NAME }}.zip" ${{ env.PLUGIN_NAME }} "${{ env.PLUGIN_NAME }}.gdextension"
           fi
 
       - name: Upload final zip
