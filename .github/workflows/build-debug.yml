@@ -93,13 +93,15 @@ jobs:
   merge:
     runs-on: ubuntu-22.04
     needs: build
+    # Define environment variables for the entire job
+    env:
+      PLUGIN_NAME: plugin_name_goes_here
     steps:
       - name: Checkout
         uses: actions/checkout@v4
 
       - name: Create fresh plugin folder
-        run: |
-          mkdir -p ${{env.PLUGIN_NAME}}
+        run: mkdir -p ${{ env.PLUGIN_NAME }}
 
       - name: Download all artifacts
         uses: actions/download-artifact@v4
@@ -108,16 +110,19 @@ jobs:
           path: ${{ env.PLUGIN_NAME }}/bin
 
       - name: Copy .gdextension file
-        run: cp "test_project/${{ env.PLUGIN_NAME }}/${{ env.PLUGIN_NAME }}.gdextension" "./${{ env.PLUGIN_NAME }}.gdextension"
-      
+        run: cp "test_project/${{ env.PLUGIN_NAME }}/${{ env.PLUGIN_NAME }}.gdextension" "${{ env.PLUGIN_NAME }}/${{ env.PLUGIN_NAME }}.gdextension"
+        
       - name: Copy LICENSE.md
-        run:
+        run: |
           if [ -f LICENSE.md ]; then
             cp "LICENSE.md" "${{ env.PLUGIN_NAME }}/LICENSE.md"
           fi
 
-      - name: Upload final zip
+      - name: Create zip archive
+        run: zip -r ${{ env.PLUGIN_NAME }}.zip ${{ env.PLUGIN_NAME }}
+
+      - name: Upload final artifact
         uses: actions/upload-artifact@v4
         with:
-          name: "${{ env.PLUGIN_NAME }}"
+          name: "${{ env.PLUGIN_NAME }}.zip"
           path: "${{ env.PLUGIN_NAME }}.zip"
