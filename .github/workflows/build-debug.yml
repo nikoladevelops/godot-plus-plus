@@ -56,28 +56,21 @@ jobs:
         uses: ./godot-cpp/.github/actions/godot-cache-restore
         with:
           scons-cache: ${{ github.workspace }}/.scons-cache/
-          # append ".threads" only for web+enabled so cache keys are unique and match artifact naming
           cache-name: ${{ matrix.target.platform }}_${{ matrix.target.arch }}_${{ matrix.float-precision }}_${{ matrix.target-type }}${{ (matrix.target.platform == 'web' && matrix.target.threads == 'enabled') && '.threads' || '' }}
 
       - name: Build GDExtension Debug Build
-        shell: bash
+        shell: sh
         env:
           SCONS_CACHE: ${{ github.workspace }}/.scons-cache/
         run: |
-          # Map matrix threads values (enabled/disabled) to a SCons-friendly flag.
-          # We only pass threads=yes when the matrix indicates web+enabled.
           THREADS_FLAG=""
           if [ "${{ matrix.target.platform }}" = "web" ]; then
             if [ "${{ matrix.target.threads }}" = "enabled" ]; then
               THREADS_FLAG=" threads=yes"
             else
-              # omit the threads flag entirely for disabled (don't pass threads=no)
-              THREADS_FLAG=""
+              THREADS_FLAG=" threads=no"
             fi
           fi
-
-          # Run scons with the computed THREADS_FLAG. Note: THREADS_FLAG intentionally has no '.' —
-          # dot is only for artifact naming, not for scons flags.
           scons target=${{ matrix.target-type }} platform=${{ matrix.target.platform }} arch=${{ matrix.target.arch }} precision=${{ matrix.float-precision }}$THREADS_FLAG
 
       - name: Save .scons_cache
@@ -86,24 +79,17 @@ jobs:
           scons-cache: ${{ github.workspace }}/.scons-cache/
           cache-name: ${{ matrix.target.platform }}_${{ matrix.target.arch }}_${{ matrix.float-precision }}_${{ matrix.target-type }}${{ (matrix.target.platform == 'web' && matrix.target.threads == 'enabled') && '.threads' || '' }}
 
-      # Clean up compilation files
       - name: Windows - Delete compilation files
         if: ${{ matrix.target.platform == 'windows' }}
         shell: pwsh
-        run: |
-          Remove-Item bin/* -Include *.exp,*.lib,*.pdb -Force
+        run: Remove-Item bin/* -Include *.exp,*.lib,*.pdb -Force
 
-      # Upload the build
       - name: Upload Artifact
         uses: actions/upload-artifact@v4
         with:
-          # naming uses '.' separators; add ".threads" (with leading dot) only for web+enabled
-          name: lib${{ env.PLUGIN_NAME }}.${{ matrix.target.platform }}.${{ matrix.target-type }}.${{ matrix.target.arch }}${{ (matrix.target.platform == 'web' && matrix.target.threads == 'enabled') && '.threads' || '' }}.${{ matrix.float-precision }}
-          path: |
-            ${{ github.workspace }}/bin/**
+          name: bin-${{ matrix.target.platform }}-${{ matrix.target.arch }}${{ (matrix.target.platform == 'web' && matrix.target.threads == 'enabled') && '.threads' || '' }}
+          path: bin/${{ matrix.target.platform }}
 
-  # Merges all the build artifacts together into a single artifact.
-  # If you comment out this step, all the builds will be uploaded individually.
   merge:
     runs-on: ubuntu-22.04
     needs: build
@@ -111,73 +97,21 @@ jobs:
       - name: Checkout
         uses: actions/checkout@v4
 
-      - name: Download all artifacts
+      - name: Download all artifacts (preserve folder structure)
         uses: actions/download-artifact@v4
         with:
-          # download ALL artifacts from all jobs; merge-multiple ensures they land together
           merge-multiple: true
-          path: artifacts_tmp
+          path: bin
 
-      - name: Prepare final bin folder
+      - name: Copy .gdextension file
+        run: cp "test_project/${{ env.PLUGIN_NAME }}/${{ env.PLUGIN_NAME }}.gdextension" "./${{ env.PLUGIN_NAME }}.gdextension"
+
+      - name: Create final zip (keep bin subfolders intact)
         run: |
-          rm -rf bin || true
-          mkdir -p bin
-
-      - name: Install unzip (for extracting any zipped artifacts)
-        run: |
-          sudo apt-get update
-          sudo apt-get install -y unzip
-
-      - name: Merge/extract downloaded artifacts into bin/
-        shell: bash
-        run: |
-          set -euo pipefail
-          shopt -s nullglob
-
-          for item in artifacts_tmp/*; do
-            if [ -d "$item" ]; then
-              # If a directory was downloaded, copy its contents into bin/
-              cp -a "$item/." bin/
-            elif [ -f "$item" ]; then
-              case "$item" in
-                *.zip)
-                  tmpdir="$(mktemp -d)"
-                  unzip -o "$item" -d "$tmpdir"
-                  # If the extracted archive has a top-level bin/, merge it; otherwise merge all contents
-                  if [ -d "$tmpdir/bin" ]; then
-                    cp -a "$tmpdir/bin/." bin/
-                  else
-                    cp -a "$tmpdir/." bin/
-                  fi
-                  rm -rf "$tmpdir"
-                  ;;
-                *)
-                  # regular file (dll, so, wasm, etc.) -> copy into bin/
-                  cp -a "$item" bin/
-                  ;;
-              esac
-            fi
-          done
-
-      - name: Copy .gdextension file next to bin/
-        run: |
-          src="test_project/${{ env.PLUGIN_NAME }}/${{ env.PLUGIN_NAME }}.gdextension"
-          dst="./${{ env.PLUGIN_NAME }}.gdextension"
-          if [ -f "$src" ]; then
-            cp "$src" "$dst"
+          if [ -f LICENSE.md ]; then
+            zip -r "${{ env.PLUGIN_NAME }}.zip" bin "${{ env.PLUGIN_NAME }}.gdextension" LICENSE.md
           else
-            echo "Warning: .gdextension not found at $src"
-          fi
-
-      - name: Create final zip (single zip only)
-        shell: bash
-        run: |
-          ZIP_NAME="${{ env.PLUGIN_NAME }}.zip"
-          # include LICENSE.md in the zip only if it exists in repo root
-          if [ -f "LICENSE.md" ]; then
-            zip -r "$ZIP_NAME" bin "${{ env.PLUGIN_NAME }}.gdextension" LICENSE.md
-          else
-            zip -r "$ZIP_NAME" bin "${{ env.PLUGIN_NAME }}.gdextension"
+            zip -r "${{ env.PLUGIN_NAME }}.zip" bin "${{ env.PLUGIN_NAME }}.gdextension"
           fi
 
       - name: Upload final zip
