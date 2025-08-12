@@ -27,8 +27,8 @@ jobs:
           #  { platform: android, arch: arm32, os: ubuntu-22.04 },
           #  { platform: android, arch: arm64, os: ubuntu-22.04 },
           #  { platform: ios, arch: arm64, os: macos-latest },
-           { platform: web, arch: wasm32, os: ubuntu-22.04, threads: disabled },
-           { platform: web, arch: wasm32, os: ubuntu-22.04, threads: enabled }
+           #{ platform: web, arch: wasm32, os: ubuntu-22.04, threads: disabled },
+           #{ platform: web, arch: wasm32, os: ubuntu-22.04, threads: enabled }
           ]
         target-type: [template_debug] #template_release]
         float-precision: [single] #[double] -> if you need double precision, you can uncomment this line and add it to the matrix
@@ -94,41 +94,56 @@ jobs:
     runs-on: ubuntu-22.04
     needs: build
     steps:
+      # Make sure we have the repo to access test_project and LICENSE.md
+      - name: Checkout
+        uses: actions/checkout@v4
+        with:
+          submodules: true
+
+      # Merge all build artifacts into one folder
       - name: Merge Artifacts
         uses: actions/upload-artifact/merge@v4
         with:
-          name: unzip-me
-          pattern: ${{env.PLUGIN_NAME}}.*
+          name: merged-artifacts
+          pattern: ${{ env.PLUGIN_NAME }}.*
           delete-merged: true
-      
-      - name: Merge platform folders into single bin/<platform>
+
+      # Restructure artifacts into bin/<platform>
+      - name: Restructure platform folders
         run: |
-          mkdir -p bin
-          for PLATFORM_PATH in bin/*; do
-            [ -d "$PLATFORM_PATH" ] || continue
-            PLATFORM=$(basename "$PLATFORM_PATH")
-            echo "Merging platform: $PLATFORM"
-            find "$PLATFORM_PATH" -mindepth 2 -type f -exec mv -t "$PLATFORM_PATH" {} +
-            find "$PLATFORM_PATH" -mindepth 1 -type d -exec rm -rf {} +
+          mkdir -p "${{ env.PLUGIN_NAME }}/bin"
+          for platform_dir in $(find . -type d -name bin); do
+            platform_name=$(basename "$(dirname "$platform_dir")")
+            mkdir -p "${{ env.PLUGIN_NAME }}/bin/${platform_name}"
+            cp -r "$platform_dir/"* "${{ env.PLUGIN_NAME }}/bin/${platform_name}/" || true
           done
 
+      # Copy .gdextension file from test_project
       - name: Copy .gdextension file
-        run: cp "test_project/${{ env.PLUGIN_NAME }}/${{ env.PLUGIN_NAME }}.gdextension" "${{ env.PLUGIN_NAME }}/${{ env.PLUGIN_NAME }}.gdextension"
+        run: |
+          mkdir -p "${{ env.PLUGIN_NAME }}"
+          cp "test_project/${{ env.PLUGIN_NAME }}/${{ env.PLUGIN_NAME }}.gdextension" \
+            "${{ env.PLUGIN_NAME }}/${{ env.PLUGIN_NAME }}.gdextension"
 
+      # Copy LICENSE.md if it exists
       - name: Copy LICENSE.md
         run: |
           if [ -f LICENSE.md ]; then
             cp "LICENSE.md" "${{ env.PLUGIN_NAME }}/LICENSE.md"
           fi
 
+      # List final folder structure for debugging
       - name: List final structure
         run: ls -R "${{ env.PLUGIN_NAME }}"
 
+      # Create zip archive
       - name: Create zip archive
         run: zip -r "${{ env.PLUGIN_NAME }}.zip" "${{ env.PLUGIN_NAME }}"
 
+      # Upload final zip
       - name: Upload final artifact
         uses: actions/upload-artifact@v4
         with:
           name: "unzip-me"
           path: "${{ env.PLUGIN_NAME }}.zip"
+
