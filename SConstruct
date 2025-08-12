@@ -91,7 +91,12 @@ if env.get("target") in ["editor", "template_debug"]:
 
 # Determine suffixes based on env (align with godot-cpp conventions)
 arch_suffix = f".{env['arch']}" if env['arch'] and env['arch'] != 'universal' else ''
-threads_suffix = '.threads' if env['platform'] == 'web' and env['threads'] in ['yes', 'true'] else ''
+# Normalize 'threads' to a lowercase string, defaulting to 'no'
+threads_val = str(env.get('threads', 'no')).strip().lower()
+
+# Determine if '.threads' suffix should be added
+threads_suffix = '.threads' if env['platform'] == 'web' and threads_val in ('yes', 'true') else ''
+
 suffix = f".{env['platform']}.{env['target']}{arch_suffix}{threads_suffix}.{precision}"
 lib_filename = f"{env.subst('$SHLIBPREFIX')}{libname}{suffix}{env.subst('$SHLIBSUFFIX')}"
 
