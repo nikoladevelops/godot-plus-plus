@@ -1,6 +1,24 @@
 name: Build GDExtension CROSS PLATFORM PLUGIN
 on:
   workflow_dispatch:
+    inputs:
+      build_type:
+        description: 'Select build type'
+        required: true
+        type: choice
+        options:
+          - debug
+          - full_plugin_compilation
+        default: debug
+      precision:
+        description: 'Select float precision'
+        required: true
+        type: choice
+        options:
+          - single
+          - double
+          - both
+        default: single
 
 env:
   PLUGIN_NAME: "plugin_name_goes_here" # Replace with your plugin name (must match .gdextension file name)
@@ -17,21 +35,21 @@ jobs:
           [
             { platform: linux, arch: x86_32, os: ubuntu-22.04 },
             { platform: linux, arch: x86_64, os: ubuntu-22.04 },
-          #  { platform: linux, arch: arm32, os: ubuntu-22.04-arm },
-          #  { platform: linux, arch: arm64, os: ubuntu-22.04-arm },
-          #  { platform: windows, arch: x86_32, os: windows-latest },
-          #  { platform: windows, arch: x86_64, os: windows-latest },
-          #  { platform: windows, arch: arm64, os: windows-latest },
-          #  { platform: macos, arch: universal, os: macos-latest },
-          #  { platform: android, arch: x86_64, os: ubuntu-22.04 },
-          #  { platform: android, arch: arm32, os: ubuntu-22.04 },
-          #  { platform: android, arch: arm64, os: ubuntu-22.04 },
-          #  { platform: ios, arch: arm64, os: macos-latest },
-           { platform: web, arch: wasm32, os: ubuntu-22.04, threads: "no" },
-           { platform: web, arch: wasm32, os: ubuntu-22.04, threads: "yes" }
+            # { platform: linux, arch: arm32, os: ubuntu-22.04-arm },
+            # { platform: linux, arch: arm64, os: ubuntu-22.04-arm },
+            # { platform: windows, arch: x86_32, os: windows-latest },
+            # { platform: windows, arch: x86_64, os: windows-latest },
+            # { platform: windows, arch: arm64, os: windows-latest },
+            # { platform: macos, arch: universal, os: macos-latest },
+            # { platform: android, arch: x86_64, os: ubuntu-22.04 },
+            # { platform: android, arch: arm32, os: ubuntu-22.04 },
+            # { platform: android, arch: arm64, os: ubuntu-22.04 },
+            # { platform: ios, arch: arm64, os: macos-latest },
+            { platform: web, arch: wasm32, os: ubuntu-22.04, threads: "no" },
+            { platform: web, arch: wasm32, os: ubuntu-22.04, threads: "yes" }
           ]
-        target-type: [template_debug] #template_release]
-        float-precision: [single] #[double] -> if you need double precision, you can uncomment this line and add it to the matrix
+        target-type: ${{ github.event.inputs.build_type == 'full_plugin_compilation' && '[template_debug, template_release]' || '[template_debug]' }}
+        float-precision: ${{ github.event.inputs.precision == 'both' && '[single, double]' || format('[{0}]', github.event.inputs.precision) }}
 
     runs-on: ${{ matrix.target.os }}
     steps:
@@ -81,7 +99,6 @@ jobs:
                 arch=${{ matrix.target.arch }} \
                 precision=${{ matrix.float-precision }} \
                 $THREADS_FLAG
-
 
       - name: Save .scons_cache
         uses: ./godot-cpp/.github/actions/godot-cache-save
@@ -155,5 +172,5 @@ jobs:
       - name: Upload final artifact
         uses: actions/upload-artifact@v4
         with:
-          name: "unzip-me"
+          name: "finished_unzip_me"
           path: "${{ env.PLUGIN_NAME }}.zip"
