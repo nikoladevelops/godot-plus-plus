@@ -184,6 +184,7 @@ jobs:
         with:
           name: ${{ steps.set-build-name.outputs.build_name }}
           path: ${{ github.workspace }}/bin
+          retention-days: 1
 
   merge:
     runs-on: ubuntu-22.04
@@ -242,3 +243,4 @@ jobs:
         with:
           name: "finished_unzip_me"
           path: "${{ env.PLUGIN_NAME }}.zip"
+          retention-days: 1
