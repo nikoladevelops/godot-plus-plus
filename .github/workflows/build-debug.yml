@@ -5,7 +5,7 @@ on:
       build_type:
         description: |
           Select build type:
-          - debug: Compiles debug builds that are loaded by the Godot editor, only used for development and testing. By using this option you can check whether your plugin wroks correctly for all operating systems and architectures.
+          - debug: Compiles debug builds that are loaded by the Godot editor, only used for development and testing. By using this option you can check whether your plugin works correctly for all operating systems and architectures.
           - full_plugin_compilation: Compiles debug builds as well as release builds that are the final builds. Enables developers to use your plugin both in the editor and also in their final exported game.
         required: true
         type: choice
@@ -31,8 +31,8 @@ on:
         description: |
           Select LTO (Link-Time Optimization) for release builds only:
           - none: No optimization.
-          - auto: Optimize for smaller, faster binaries (recommended).
-          Note: Ignored for debug builds, as LTO is not suitable for development.
+          - auto: Optimize for smaller, faster binaries by selecting the best LTO mode for each platform (recommended, may increase build time/memory usage).
+          Note: Ignored for debug builds, as LTO is not suitable for development. Disabled for Web with threads due to Emscripten limitations.
         required: true
         type: choice
         options:
@@ -103,6 +103,7 @@ jobs:
 
       - name: Set build name
         id: set-build-name
+        shell: bash
         run: |
           NAME="${{ env.PLUGIN_NAME }}.${{ matrix.target.platform }}.${{ matrix.target-type }}.${{ matrix.target.arch }}.${{ matrix.float-precision }}${{ (matrix.target.platform == 'web' && matrix.target.threads == 'yes') && '.threads' || '' }}"
           echo "build_name=$NAME" >> $GITHUB_OUTPUT
@@ -133,9 +134,7 @@ jobs:
           SCONS_CACHE: ${{ github.workspace }}/.scons-cache/
         run: |
           echo "=== DEBUG: Build Parameters ==="
-          echo "Platform: ${{ matrix.target.platform}}""
-
-          System: platform }}"
+          echo "Platform: ${{ matrix.target.platform }}"
           echo "Arch: ${{ matrix.target.arch }}"
           echo "Threads setting: ${{ matrix.target.threads }}"
           echo "Target type: ${{ matrix.target-type }}"
