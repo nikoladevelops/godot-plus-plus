@@ -49,6 +49,14 @@ opts.Add(EnumVariable(
     allowed_values=('yes', 'no', 'true', 'false')
 ))
 
+# Build profiles can be used to decrease compile times.
+# You can either specify "disabled_classes", OR
+# explicitly specify "enabled_classes" which disables all other classes.
+# Modify the example file as needed and uncomment the line below or
+# manually specify the build_profile parameter when running SCons.
+
+#env["build_profile"] = "build_profile.json"
+
 # Update the environment with the options
 opts.Update(env)
 
