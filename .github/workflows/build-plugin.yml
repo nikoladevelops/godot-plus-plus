@@ -120,7 +120,6 @@ jobs:
         with:
           platform: ${{ matrix.target.platform }}
           em-version: 3.1.62
-          precision: ${{ matrix.float-precision }}
 
       - name: Restore .scons_cache
         uses: ./godot-cpp/.github/actions/godot-cache-restore
