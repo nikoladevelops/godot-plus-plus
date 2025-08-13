@@ -123,6 +123,7 @@ def prompt_for_path() -> Optional[str]:
     """Prompt user for a Godot executable path, handling files and directories."""
     print("No valid Godot executable found. Please provide a path manually.")
     while True:
+        print("\n")
         user_input = input(
             "Enter the folder path or full path to your Godot executable "
             "(if a folder, the executable must be directly inside): "

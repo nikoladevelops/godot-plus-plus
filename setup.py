@@ -46,9 +46,7 @@ def display_menu():
     print("2. Rename Plugin")
     print("3. Compile Plugin Debug Build")
     print("4. Generate Missing XML Documentation Files")
-    print("5. Commit And Push To GitHub")
-    print("6. Export Plugin")
-    print("Enter your choice (1-6), or 'q' to quit: ")
+    print("Enter your choice (1-4), or 'q' to quit: ")
 
 
 def run_tool_script(script_filename):
@@ -69,8 +67,6 @@ def handle_option(choice):
         '2': "renaming.py",
         '3': "compile_debug_build.py",
         '4': "generate_xml_docs.py",
-        '5': "git_commit_push.py",
-        '6': "export_plugin.py",
     }
 
     script_name = script_map.get(choice)
@@ -84,7 +80,7 @@ def handle_option(choice):
 def main():
     """Main loop to display menu and handle user input."""
     display_start_screen()
-    valid_choices = {'1', '2', '3', '4', '5', '6'}
+    valid_choices = {'1', '2', '3', '4'}
 
     while True:
         display_menu()
