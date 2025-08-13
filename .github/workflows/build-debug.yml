@@ -3,7 +3,10 @@ on:
   workflow_dispatch:
     inputs:
       build_type:
-        description: 'Select build type'
+        description: |
+          Select build type:
+          - debug: Compiles debug builds that are loaded by the Godot editor, only used for development and testing. By using this option you can check whether your plugin wroks correctly for all operating systems and architectures.
+          - full_plugin_compilation: Compiles debug builds as well as release builds that are the final builds. Enables developers to use your plugin both in the editor and also in their final exported game.
         required: true
         type: choice
         options:
@@ -11,7 +14,12 @@ on:
           - full_plugin_compilation
         default: debug
       precision:
-        description: 'Select float precision'
+        description: |
+          Select float precision for floating-point calculations in the GDExtension:
+          - single: Uses 32-bit floats (faster, less memory, recommended for compatibility with standard Godot Engine releases).
+          - double: Uses 64-bit floats (higher precision, more memory, only compatible with Godot Engine compiled with float=64).
+          - both: Builds both single and double precision versions (use if targeting both standard and custom Godot builds).
+          Note: Most Godot Engine releases use single precision (float=32). Choose 'single' unless you have a custom double-precision Godot build.
         required: true
         type: choice
         options:
@@ -19,6 +27,18 @@ on:
           - double
           - both
         default: single
+      lto:
+        description: |
+          Select LTO (Link-Time Optimization) for release builds only:
+          - none: No optimization.
+          - auto: Optimize for smaller, faster binaries (recommended).
+          Note: Ignored for debug builds, as LTO is not suitable for development.
+        required: true
+        type: choice
+        options:
+          - none
+          - auto
+        default: auto
 
 env:
   PLUGIN_NAME: "plugin_name_goes_here" # Replace with your plugin name (must match .gdextension file name)
@@ -81,6 +101,13 @@ jobs:
         with:
           submodules: true
 
+      - name: Set build name
+        id: set-build-name
+        run: |
+          NAME="${{ env.PLUGIN_NAME }}.${{ matrix.target.platform }}.${{ matrix.target-type }}.${{ matrix.target.arch }}.${{ matrix.float-precision }}${{ (matrix.target.platform == 'web' && matrix.target.threads == 'yes') && '.threads' || '' }}"
+          echo "build_name=$NAME" >> $GITHUB_OUTPUT
+          echo "cache_name=${NAME//./_}_${{ github.event.inputs.lto }}" >> $GITHUB_OUTPUT
+
       - name: Install multilib support
         if: ${{ matrix.target.platform == 'linux' && matrix.target.arch == 'x86_32' }}
         run: |
@@ -92,12 +119,13 @@ jobs:
         with:
           platform: ${{ matrix.target.platform }}
           em-version: 3.1.62
+          precision: ${{ matrix.float-precision }}
 
       - name: Restore .scons_cache
         uses: ./godot-cpp/.github/actions/godot-cache-restore
         with:
           scons-cache: ${{ github.workspace }}/.scons-cache/
-          cache-name: ${{env.PLUGIN_NAME}}.${{ matrix.target.platform }}.${{matrix.target-type}}.${{ matrix.target.arch }}.${{ matrix.float-precision }}${{ (matrix.target.platform == 'web' && matrix.target.threads == 'yes') && '-threads' || '' }}
+          cache-name: ${{ steps.set-build-name.outputs.cache_name }}
 
       - name: Build GDExtension
         shell: sh
@@ -105,11 +133,14 @@ jobs:
           SCONS_CACHE: ${{ github.workspace }}/.scons-cache/
         run: |
           echo "=== DEBUG: Build Parameters ==="
-          echo "Platform: ${{ matrix.target.platform }}"
+          echo "Platform: ${{ matrix.target.platform}}""
+
+          System: platform }}"
           echo "Arch: ${{ matrix.target.arch }}"
           echo "Threads setting: ${{ matrix.target.threads }}"
           echo "Target type: ${{ matrix.target-type }}"
           echo "Float precision: ${{ matrix.float-precision }}"
+          echo "LTO: ${{ github.event.inputs.lto }}"
           echo "==============================="
 
           THREADS_FLAG=""
@@ -117,17 +148,33 @@ jobs:
             THREADS_FLAG=" threads=${{ matrix.target.threads }}"
           fi
 
+          LTO_FLAG=""
+          if [[ "${{ github.event.inputs.lto }}" = "auto" && "${{ matrix.target-type }}" = "template_release" ]]; then
+            if [[ "${{ matrix.target.platform }}" = "linux" || "${{ matrix.target.platform }}" = "windows" || "${{ matrix.target.platform }}" = "macos" || "${{ matrix.target.platform }}" = "android" || "${{ matrix.target.platform }}" = "ios" ]]; then
+              LTO_FLAG=" lto=auto"
+            elif [[ "${{ matrix.target.platform }}" = "web" ]]; then
+              if [[ "${{ matrix.target.threads }}" = "no" ]]; then
+                LTO_FLAG=" lto=auto"
+              else
+                echo "WARNING: LTO disabled for web with threads=yes due to potential Emscripten issues."
+              fi
+            fi
+          elif [[ "${{ github.event.inputs.lto }}" = "auto" && "${{ matrix.target-type }}" = "template_debug" ]]; then
+            echo "WARNING: LTO ignored for debug builds, as it is not suitable for development."
+          fi
+
           scons target=${{ matrix.target-type }} \
                 platform=${{ matrix.target.platform }} \
                 arch=${{ matrix.target.arch }} \
                 precision=${{ matrix.float-precision }} \
-                $THREADS_FLAG
+                $THREADS_FLAG \
+                $LTO_FLAG
 
       - name: Save .scons_cache
         uses: ./godot-cpp/.github/actions/godot-cache-save
         with:
           scons-cache: ${{ github.workspace }}/.scons-cache/
-          cache-name: ${{ matrix.target.platform }}_${{ matrix.target.arch }}_${{ matrix.float-precision }}_${{ matrix.target-type }}${{ (matrix.target.platform == 'web' && matrix.target.threads == 'yes') && '_threads' || '' }}
+          cache-name: ${{ steps.set-build-name.outputs.cache_name }}
 
       - name: Windows - Delete compilation files
         if: ${{ matrix.target.platform == 'windows' }}
@@ -137,7 +184,7 @@ jobs:
       - name: Upload Artifact
         uses: actions/upload-artifact@v4
         with:
-          name: ${{env.PLUGIN_NAME}}.${{ matrix.target.platform }}.${{matrix.target-type}}.${{ matrix.target.arch }}.${{ matrix.float-precision }}${{ (matrix.target.platform == 'web' && matrix.target.threads == 'yes') && '.threads' || '' }}
+          name: ${{ steps.set-build-name.outputs.build_name }}
           path: ${{ github.workspace }}/bin
 
   merge:
