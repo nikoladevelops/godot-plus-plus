@@ -218,8 +218,8 @@ def update_plugin_name(new_name):
         edit_sconstruct(paths["sconstruct"], new_name)
         update_dont_touch(new_name)
 
-        # Edit the build-debug.yml file
-        build_debug_path = os.path.join(PARENT_DIR, ".github", "workflows", "build-debug.yml")
+        # Edit the build-plugin.yml file
+        build_debug_path = os.path.join(PARENT_DIR, ".github", "workflows", "build-plugin.yml")
         if os.path.exists(build_debug_path):
             edit_github_yml(build_debug_path, old_name, new_name)
 
