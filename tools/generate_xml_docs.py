@@ -26,8 +26,7 @@ def print_header() -> None:
     print(f"\n{'=' * 80}")
     print(f"{TOOL_HEADER:^80}")
     print(f"{'=' * 80}")
-    print("This tool generates XML documentation for your Godot project.")
-    print("Type 'q' to quit at any prompt.\n")
+    print("This tool generates XML documentation for your GDExtension plugin.")
 
 def display_warning() -> None:
     """Display warnings about requirements for generating documentation."""
@@ -121,9 +120,10 @@ def read_cached_path() -> Optional[str]:
 
 def prompt_for_path() -> Optional[str]:
     """Prompt user for a Godot executable path, handling files and directories."""
-    print("No valid Godot executable found. Please provide a path manually.")
+    print("\n")
+    print("No valid Godot executable found.")
+    print("Type 'q' to quit or enter path manually.\n")
     while True:
-        print("\n")
         user_input = input(
             "Enter the folder path or full path to your Godot executable "
             "(if a folder, the executable must be directly inside): "

@@ -43,10 +43,11 @@ def display_menu():
 
     print("Choose an option:")
     print("1. Change Godot Target Version")
-    print("2. Rename Plugin")
-    print("3. Compile Plugin Debug Build")
-    print("4. Generate Missing XML Documentation Files")
-    print("Enter your choice (1-4), or 'q' to quit: ")
+    print("2. Change Build Profile")
+    print("3. Rename Plugin")
+    print("4. Compile Plugin Debug Build")
+    print("5. Generate Missing XML Documentation Files")
+    print("Enter your choice (1-5), or 'q' to quit: ")
 
 
 def run_tool_script(script_filename):
@@ -64,9 +65,10 @@ def handle_option(choice):
     clear_screen()
     script_map = {
         '1': "change_version.py",
-        '2': "renaming.py",
-        '3': "compile_debug_build.py",
-        '4': "generate_xml_docs.py",
+        '2': "change_build_profile.py",
+        '3': "renaming.py",
+        '4': "compile_debug_build.py",
+        '5': "generate_xml_docs.py",
     }
 
     script_name = script_map.get(choice)
@@ -80,7 +82,7 @@ def handle_option(choice):
 def main():
     """Main loop to display menu and handle user input."""
     display_start_screen()
-    valid_choices = {'1', '2', '3', '4'}
+    valid_choices = {'1', '2', '3', '4', '5'}
 
     while True:
         display_menu()

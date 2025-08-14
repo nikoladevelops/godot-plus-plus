@@ -49,6 +49,16 @@ opts.Add(EnumVariable(
     allowed_values=('yes', 'no', 'true', 'false')
 ))
 
+is_2d_profile_used = "false"
+is_3d_profile_used = "false"
+is_custom_profile_used = "false"
+if is_2d_profile_used:
+    env["build_profile"] = "2d_build_profile.json"
+elif is_3d_profile_used:
+    env["build_profile"] = "3d_build_profile.json"
+elif is_custom_profile_used:
+    env["build_profile"] = "build_profile.json"
+
 # Build profiles can be used to decrease compile times.
 # You can either specify "disabled_classes", OR
 # explicitly specify "enabled_classes" which disables all other classes.

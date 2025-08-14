@@ -10,6 +10,21 @@ SUBMODULE_PATH = os.path.join(PARENT_DIR, "godot-cpp")
 GITMODULES_PATH = os.path.join(PARENT_DIR, ".gitmodules")
 DONT_TOUCH_PATH = os.path.join(PARENT_DIR, "dont_touch.txt")
 
+
+def clean_build_files() -> None:
+    """Run 'scons -c' to clean old build files.
+
+    Raises:
+        SystemExit: If the scons -c command fails.
+    """
+    try:
+        subprocess.run(["scons", "-c"], check=True, cwd=PARENT_DIR)
+        print("\n")
+        print("Old build files cleaned successfully.")
+    except subprocess.CalledProcessError:
+        print("Error: Failed to run 'scons -c' to clean old build files.")
+        exit(1)
+
 def run_git_command(args, cwd=None):
     """Run a Git command and return (success, output)."""
     result = subprocess.run(
@@ -219,7 +234,8 @@ def switch_godot_cpp_version():
 
     # Ensure the godot-cpp submodule is initialized
     git_path = os.path.join(SUBMODULE_PATH, ".git")
-    if not (os.path.isdir(git_path) or os.path.isfile(git_path)):
+    is_submodule_initialized = os.path.isdir(git_path) or os.path.isfile(git_path)
+    if not is_submodule_initialized:
         print("godot-cpp submodule not initialized. Initializing now...\n")
         success, output = run_git_command(["submodule", "update", "--init", "--recursive"], cwd=PARENT_DIR)
         if not success:
@@ -247,7 +263,16 @@ def switch_godot_cpp_version():
     plugin_name, version = read_dont_touch_file()
     update_gdextension_file(plugin_name, version)
 
+
+    if is_submodule_initialized:
+        print("Because you already had a godot-cpp version, all old build files need to be cleaned.")
+        print("\n")
+        clean_build_files()
+
+    print("\n")
     print(f"\nSuccessfully switched to godot-cpp branch: {selected_branch}")
+    print("\n")
+    print("Warning: Since you switched to a different version of godot-cpp, you need to re-generate and edit the build profile (if you are using one), so that class names match correctly.")
     print("\nPlease recompile the plugin to apply changes.\n")
     input("Press any key to continue...")
 
