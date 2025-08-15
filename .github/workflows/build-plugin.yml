@@ -39,6 +39,18 @@ on:
           - none
           - auto
         default: auto
+      use_cache:
+        description: |
+          Whether to use caching for the build process. Set to false if your project is large and you want to avoid using cache to prevent storage limit issues.
+        required: false
+        type: boolean
+        default: true
+      clear_all_cache:
+        description: |
+          Clear all GitHub Actions caches in the repository before starting the build. Useful if caches are corrupted, outdated, or approaching the storage limit. This will delete all caches, so use with caution. This is a perfect option if you are switching to another godot-cpp branch or if you are experiencing issues with the cache.
+        required: false
+        type: boolean
+        default: false
 
 env:
   PLUGIN_NAME: "plugin_name_goes_here" # Replace with your plugin name (must match .gdextension file name)
@@ -66,8 +78,33 @@ jobs:
           echo "target_types=$TARGET_TYPES" >> $GITHUB_OUTPUT
           echo "float_precisions=$FLOAT_PRECISIONS" >> $GITHUB_OUTPUT
 
+  clear-cache:
+    if: ${{ github.event.inputs.clear_all_cache == 'true' }}
+    permissions:
+      actions: write
+    runs-on: ubuntu-latest
+    steps:
+      - name: Clear cache
+        uses: actions/github-script@v6
+        with:
+          script: |
+            console.log("About to clear")
+            const caches = await github.rest.actions.getActionsCacheList({
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+            })
+            for (const cache of caches.data.actions_caches) {
+              console.log(cache)
+              await github.rest.actions.deleteActionsCacheById({
+                owner: context.repo.owner,
+                repo: context.repo.repo,
+                cache_id: cache.id,
+              })
+            }
+            console.log("Clear completed")
+
   build:
-    needs: set-matrix
+    needs: [set-matrix, clear-cache]
     strategy:
       fail-fast: false
       matrix:
@@ -122,6 +159,7 @@ jobs:
           em-version: 3.1.62
 
       - name: Restore .scons_cache
+        if: ${{ github.event.inputs.use_cache == 'true' }}
         uses: ./godot-cpp/.github/actions/godot-cache-restore
         with:
           scons-cache: ${{ github.workspace }}/.scons-cache/
@@ -169,6 +207,7 @@ jobs:
                 $LTO_FLAG
 
       - name: Save .scons_cache
+        if: ${{ github.event.inputs.use_cache == 'true' }}
         uses: ./godot-cpp/.github/actions/godot-cache-save
         with:
           scons-cache: ${{ github.workspace }}/.scons-cache/
