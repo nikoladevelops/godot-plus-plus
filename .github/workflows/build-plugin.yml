@@ -47,7 +47,7 @@ on:
         default: true
       clear_all_cache:
         description: |
-          Clear All Cache: Clear all GitHub Actions caches in the repository before starting the build. Useful if caches are corrupted, outdated, or approaching the storage limit. This will delete all caches, so use with caution. This is a perfect option if you are switching to another godot-cpp branch or if you are experiencing issues with the cache. You should use this option when making changes to a build profile that you are currently using.
+          Clear All Cache: Clear all GitHub Actions caches in the repository before starting the build. Useful if caches are corrupted, outdated, or approaching the storage limit. This will delete all caches, so use with caution. This is a perfect option if you are switching to another godot-cpp branch or if you are experiencing issues with the cache.
         required: false
         type: boolean
         default: false
@@ -77,11 +77,23 @@ jobs:
           fi
           echo "target_types=$TARGET_TYPES" >> $GITHUB_OUTPUT
           echo "float_precisions=$FLOAT_PRECISIONS" >> $GITHUB_OUTPUT
+  
+  clear-cache:
+    runs-on: ubuntu-22.04
+    permissions:
+      actions: write # Required to delete GitHub Actions caches
+    steps:
+      - name: Clear all caches
+        if: ${{ github.event.inputs.clear_all_cache == 'true' }}
+        run: |
+          echo "About to clear all caches"
+          gh cache delete --all --succeed-on-no-caches
+          echo "Clear completed"
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
 
   build:
-    needs: set-matrix
-    permissions:
-      actions: write # Required for the Clear cache step to delete GitHub Actions caches
+    needs: [set-matrix, clear-cache] # Only run after set-matrix and clear-cache jobs
     strategy:
       fail-fast: false
       matrix:
@@ -110,26 +122,6 @@ jobs:
 
     runs-on: ${{ matrix.target.os }}
     steps:
-      - name: Clear cache
-        if: ${{ github.event.inputs.clear_all_cache == 'true' }}
-        uses: actions/github-script@v6
-        with:
-          script: |
-            console.log("About to clear")
-            const caches = await github.rest.actions.getActionsCacheList({
-              owner: context.repo.owner,
-              repo: context.repo.repo,
-            })
-            for (const cache of caches.data.actions_caches) {
-              console.log(cache)
-              await github.rest.actions.deleteActionsCacheById({
-                owner: context.repo.owner,
-                repo: context.repo.repo,
-                cache_id: cache.id,
-              })
-            }
-            console.log("Clear completed")
-
       - name: Checkout
         uses: actions/checkout@v4
         with:
