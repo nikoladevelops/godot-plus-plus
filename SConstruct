@@ -53,7 +53,7 @@ opts.Add(EnumVariable(
 # You can either specify "disabled_classes", OR
 # explicitly specify "enabled_classes" which disables all other classes.
 
-is_2d_profile_used = "false"
+is_2d_profile_used = "true"
 is_3d_profile_used = "false"
 is_custom_profile_used = "false"
 if is_2d_profile_used:

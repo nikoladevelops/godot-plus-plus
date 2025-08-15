@@ -47,7 +47,7 @@ on:
         default: true
       clear_all_cache:
         description: |
-          Clear All Cache: Clear all GitHub Actions caches in the repository before starting the build. Useful if caches are corrupted, outdated, or approaching the storage limit. This will delete all caches, so use with caution. This is a perfect option if you are switching to another godot-cpp branch or if you are experiencing issues with the cache.
+          Clear All Cache: Clear all GitHub Actions caches in the repository before starting the build. Useful if caches are corrupted, outdated, or approaching the storage limit. This will delete all caches, so use with caution. This is a perfect option if you are switching to another godot-cpp branch or if you are experiencing issues with the cache. You should use this option when making changes to a build profile that you are currently using.
         required: false
         type: boolean
         default: false
