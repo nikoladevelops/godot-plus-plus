@@ -77,12 +77,15 @@ jobs:
           fi
           echo "target_types=$TARGET_TYPES" >> $GITHUB_OUTPUT
           echo "float_precisions=$FLOAT_PRECISIONS" >> $GITHUB_OUTPUT
-  
+
   clear-cache:
     runs-on: ubuntu-22.04
+    needs: set-matrix
     permissions:
       actions: write # Required to delete GitHub Actions caches
     steps:
+      - name: Checkout
+        uses: actions/checkout@v4
       - name: Clear all caches
         if: ${{ github.event.inputs.clear_all_cache == 'true' }}
         run: |
