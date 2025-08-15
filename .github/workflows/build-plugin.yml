@@ -201,13 +201,6 @@ jobs:
                 $THREADS_FLAG \
                 $LTO_FLAG
 
-      - name: Debug Cache Contents
-        if: ${{ github.event.inputs.use_cache == 'true' }}
-        shell: bash
-        run: |
-          echo "Cache contents before save:"
-          find "${{ github.workspace }}/.scons-cache/${{ steps.set-build-name.outputs.cache_name }}" -type f || echo "Directory not found or empty"
-
       - name: Save .scons_cache
         if: ${{ github.event.inputs.use_cache == 'true' }}
         uses: ./godot-cpp/.github/actions/godot-cache-save
