@@ -153,13 +153,13 @@ jobs:
       - name: Set SCONS_CACHE
         if: ${{ github.event.inputs.use_cache == 'true' }}
         shell: bash
-        run: echo "SCONS_CACHE=${{ github.workspace }}/.scons-cache/" >> $GITHUB_ENV
+        run: echo "SCONS_CACHE=${{ github.workspace }}/.scons-cache/${{ steps.set-build-name.outputs.cache_name }}" >> $GITHUB_ENV
 
       - name: Restore .scons_cache
         if: ${{ github.event.inputs.use_cache == 'true' }}
         uses: ./godot-cpp/.github/actions/godot-cache-restore
         with:
-          scons-cache: ${{ github.workspace }}/.scons-cache/
+          scons-cache: ${{ github.workspace }}/.scons-cache/${{ steps.set-build-name.outputs.cache_name }}
           cache-name: ${{ steps.set-build-name.outputs.cache_name }}
 
       - name: Build GDExtension
@@ -201,11 +201,18 @@ jobs:
                 $THREADS_FLAG \
                 $LTO_FLAG
 
+      - name: Debug Cache Contents
+        if: ${{ github.event.inputs.use_cache == 'true' }}
+        shell: bash
+        run: |
+          echo "Cache contents before save:"
+          ls -R ${{ github.workspace }}/.scons-cache/
+
       - name: Save .scons_cache
         if: ${{ github.event.inputs.use_cache == 'true' }}
         uses: ./godot-cpp/.github/actions/godot-cache-save
         with:
-          scons-cache: ${{ github.workspace }}/.scons-cache/
+          scons-cache: ${{ github.workspace }}/.scons-cache/${{ steps.set-build-name.outputs.cache_name }}
           cache-name: ${{ steps.set-build-name.outputs.cache_name }}
 
       - name: Windows - Delete compilation files
