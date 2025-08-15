@@ -206,7 +206,7 @@ jobs:
         shell: bash
         run: |
           echo "Cache contents before save:"
-          ls -R ${{ github.workspace }}/.scons-cache/
+          find "${{ github.workspace }}/.scons-cache/${{ steps.set-build-name.outputs.cache_name }}" -type f || echo "Directory not found or empty"
 
       - name: Save .scons_cache
         if: ${{ github.event.inputs.use_cache == 'true' }}
