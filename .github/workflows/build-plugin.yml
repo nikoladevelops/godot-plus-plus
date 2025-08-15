@@ -155,6 +155,11 @@ jobs:
           platform: ${{ matrix.target.platform }}
           em-version: 3.1.62
 
+      - name: Set SCONS_CACHE
+        if: ${{ github.event.inputs.use_cache == 'true' }}
+        shell: bash
+        run: echo "SCONS_CACHE=${{ github.workspace }}/.scons-cache/" >> $GITHUB_ENV
+
       - name: Restore .scons_cache
         if: ${{ github.event.inputs.use_cache == 'true' }}
         uses: ./godot-cpp/.github/actions/godot-cache-restore
@@ -164,8 +169,6 @@ jobs:
 
       - name: Build GDExtension
         shell: bash
-        env:
-          SCONS_CACHE: ${{ github.event.inputs.use_cache == 'true' && format('{0}/.scons-cache/', github.workspace) || '' }}
         run: |
           echo "=== DEBUG: Build Parameters ==="
           echo "Platform: ${{ matrix.target.platform }}"
