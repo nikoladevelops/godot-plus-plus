@@ -70,7 +70,7 @@
     "gen",
     "bin",
     "test_project",
-    "tools",
+    //"tools",
     ".clang-format",
     ".editorconfig",
     ".gdignore",

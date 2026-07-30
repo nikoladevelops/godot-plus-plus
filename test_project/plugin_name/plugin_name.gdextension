@@ -1,6 +1,6 @@
 [configuration]
 entry_symbol = "plugin_name_init"
-compatibility_minimum = "4.5"
+compatibility_minimum = "4.6"
 
 [libraries]
 ; Relative paths ensure that our GDExtension can be placed anywhere in the project directory.

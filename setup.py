@@ -28,17 +28,6 @@ def read_dont_touch():
         print("Check the scripts inside the tools folder for guidance.")
         sys.exit(1)
 
-
-def display_start_screen():
-    print("\n=== Godot C++ GDExtension Setup Tool By @realNikich ===\n")
-    print(
-        "Official GitHub Repository: https://github.com/nikoladevelops/godot-plus-plus"
-    )
-    print("Find Godot GDExtension Tutorials Here: https://youtube.com/@realNikich\n")
-    input("Press any key to continue...")
-    clear_screen()
-
-
 def display_menu():
     """Display the main menu options."""
     clear_screen()
@@ -54,7 +43,8 @@ def display_menu():
     print("3. Rename Plugin")
     print("4. Compile Plugin Debug Build")
     print("5. Generate Missing XML Documentation Files")
-    print("Enter your choice (1-5), or 'q' to quit: ")
+    print("6. Tutorials And Help With Godot C++")
+    print("Enter your choice (1-6), or 'q' to quit: ")
 
 
 def run_tool_script(script_filename):
@@ -70,12 +60,21 @@ def run_tool_script(script_filename):
 def handle_option(choice):
     """Handle the selected menu option."""
     clear_screen()
+
+    valid_choices = {"1", "2", "3", "4", "5", "6"}
+
+    if choice not in valid_choices:
+        print("Invalid choice. Please enter a valid option or 'q' to quit.")
+        input("Press Enter to continue...")
+        return
+
     script_map = {
         "1": "change_version.py",
         "2": "change_build_profile.py",
         "3": "renaming.py",
         "4": "compile_debug_build.py",
         "5": "generate_xml_docs.py",
+        "6": "tutorials.py"
     }
 
     script_name = script_map.get(choice)
@@ -88,8 +87,6 @@ def handle_option(choice):
 
 def main():
     """Main loop to display menu and handle user input."""
-    display_start_screen()
-    valid_choices = {"1", "2", "3", "4", "5"}
 
     while True:
         display_menu()
@@ -99,10 +96,6 @@ def main():
             print("Quitting...")
             sys.exit(0)
 
-        if user_input not in valid_choices:
-            print("Invalid choice. Please enter a valid option or 'q' to quit.")
-            input("Press Enter to continue...")
-            continue
 
         handle_option(user_input)
 
