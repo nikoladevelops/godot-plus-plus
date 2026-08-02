@@ -2,6 +2,7 @@ import json
 
 from paths import CONFIG_PATH
 
+
 class _PluginConfig:
     def __init__(self, config_path=CONFIG_PATH):
         self.config_path = config_path
@@ -9,18 +10,14 @@ class _PluginConfig:
         self.data = {
             "pluginName": "plugin_name",
             "godotVersion": "4.7",
-            "godotPath": "GODOT_ENGINE_PATH_GOES_HERE"
+            "godotPath": "GODOT_ENGINE_PATH_GOES_HERE",
+            "ltoMode": "none"  # Default: none, options: none, auto, thin, full
         }
 
         if self.config_path.exists():
             self._read_config()
         else:
             self._save_config()
-
-    def reload(self) -> None:
-        """Reload the configuration from disk into memory."""
-        if self.config_path.exists():
-            self._read_config()
 
     def _read_config(self):
         """Internal helper to read the JSON file into memory."""
@@ -32,25 +29,34 @@ class _PluginConfig:
         with open(self.config_path, "w", encoding="utf-8") as f:
             json.dump(self.data, f, indent=2)
 
+    def reload(self) -> None:
+        """Reload configuration from disk into memory."""
+        if self.config_path.exists():
+            self._read_config()
+
+    def getGodotVersion(self) -> str:
+        self.reload()
+        return self.data.get("godotVersion", "4.7")
+
+    def setGodotVersion(self, new_version: str) -> None:
+        self.data["godotVersion"] = new_version
+        self._save_config()
+
     def getPluginName(self) -> str:
+        self.reload()
         return self.data.get("pluginName", "")
 
     def setPluginName(self, new_name: str) -> None:
         self.data["pluginName"] = new_name
         self._save_config()
 
-    def getGodotVersion(self) -> str:
-        return self.data.get("godotVersion", "")
+    def getLtoMode(self) -> str:
+        self.reload()
+        return self.data.get("ltoMode", "none")
 
-    def setGodotVersion(self, new_version: str) -> None:
-        self.data["godotVersion"] = new_version
+    def setLtoMode(self, new_lto: str) -> None:
+        self.data["ltoMode"] = new_lto
         self._save_config()
 
-    def getGodotPath(self) -> str:
-        return self.data.get("godotPath", "")
-
-    def setGodotPath(self, new_path: str) -> None:
-        self.data["godotPath"] = new_path
-        self._save_config()
 
 config = _PluginConfig()

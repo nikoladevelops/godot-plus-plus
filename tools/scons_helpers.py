@@ -22,6 +22,13 @@ def run_scons_build(target: BuildTarget) -> None:
     """
     godot_version = config.getGodotVersion()
 
+    # Only apply LTO for template_release builds.
+    # Debug builds MUST use lto=none for fast compilation and debugging.
+    if target == "template_debug":
+        lto_mode = "none"
+    else:
+        lto_mode = config.getLtoMode()
+
     if not godot_version:
         print("Error: No Godot version set in config.json.")
         input("\nPress Enter to continue...")
@@ -31,12 +38,18 @@ def run_scons_build(target: BuildTarget) -> None:
         "scons",
         f"target={target}",
         "compiledb=yes",
-        f"api_version={godot_version}"
+        f"api_version={godot_version}",
+        f"lto={lto_mode}"
     ]
 
     mode_label = "Debug" if target == "template_debug" else "Release"
 
     print(f"Starting {mode_label} compilation targeting Godot API version {godot_version}...")
+    if target == "template_debug" and config.getLtoMode() != "none":
+        print("Note: LTO is automatically disabled for Debug builds to ensure fast compilation.")
+    else:
+        print(f"LTO Optimization Mode: {lto_mode}")
+
     print(f"Executing: {' '.join(scons_args)}\n" + "-" * 50 + "\n")
 
     try:
@@ -51,7 +64,6 @@ def run_scons_build(target: BuildTarget) -> None:
         stdout_lines = []
         stderr_lines = []
 
-        # Type guard for linters: guarantees process.stdout is not None
         if process.stdout is not None:
             while True:
                 output = process.stdout.readline()
@@ -71,8 +83,8 @@ def run_scons_build(target: BuildTarget) -> None:
         if process.returncode == 0:
             print("\n" + "=" * 50)
             print(f"Compilation finished successfully ({mode_label} Build).")
-            print(f"Target API: Godot {godot_version}")
-            print(f"A {mode_label.lower()} build for your current OS and architecture was added to your Godot project's folder.")
+            print(f"Target API: Godot {godot_version} | LTO: {lto_mode}")
+            print(f"A {mode_label.lower()} build was added to the bin/ folder.")
             print("The compile_commands.json file was also updated for IDE IntelliSense support.")
         else:
             print("\n" + "=" * 50)

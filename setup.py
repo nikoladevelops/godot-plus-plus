@@ -1,6 +1,6 @@
 import os
-import sys
 import subprocess
+import sys
 
 from tools.config_manager import config
 
@@ -33,14 +33,16 @@ def display_menu():
     print("5. Compile Plugin Debug Build")
     print("6. Compile Plugin Release Build")
     print("7. Generate Missing XML Documentation Files")
-    print("8. Tutorials And Help With Godot C++")
-    print("Enter your choice (0-6), or 'q' to quit: ")
+    print("8. Change LTO Mode For Release Builds")
+    print("9. Tutorials And Help With Godot C++")
+
+    print("Enter your choice (0-9), or 'q' to quit: ")
 
 
 def run_tool_script(script_filename):
     """Run a script from the tools folder and handle errors/output."""
     script_path = os.path.join(script_dir, "tools", script_filename)
-    result = subprocess.run([sys.executable, script_path])
+    result = subprocess.run([sys.executable, script_path], check=False)
 
     if result.returncode != 0:
         print(result.stderr or "An error occurred.")
@@ -51,7 +53,7 @@ def handle_option(choice):
     """Handle the selected menu option."""
     clear_screen()
 
-    valid_choices = {"1", "2", "3", "4", "5", "6", "7", "8"}
+    valid_choices = {"1", "2", "3", "4", "5", "6", "7", "8", "9"}
 
     if choice not in valid_choices:
         print("Invalid choice. Please enter a valid option or 'q' to quit.")
@@ -66,7 +68,8 @@ def handle_option(choice):
         "5": "compile_debug_build.py",
         "6": "compile_release_build.py",
         "7": "generate_xml_docs.py",
-        "8": "tutorials.py"
+        "8": "change_lto_mode.py",
+        "9": "tutorials.py"
     }
 
     script_name = script_map.get(choice)
