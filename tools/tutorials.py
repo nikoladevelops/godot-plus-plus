@@ -1,5 +1,5 @@
 def main():
-    print("Find Godot GDExtension Tutorials Here: https://youtube.com/@realNikich\n")
+    print("Find Godot C++ GDExtension Tutorials Here: https://youtube.com/@realNikich\n")
     print("Official GitHub Repository: https://github.com/nikoladevelops/godot-plus-plus\n")
 
     print("The whole point of this template is to make it easy for anyone to write C++ performant code for Godot.\n")

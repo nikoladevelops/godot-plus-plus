@@ -2,49 +2,39 @@ import os
 import sys
 import subprocess
 
+from tools.config_manager import config
+
 script_dir = os.path.dirname(os.path.abspath(__file__))
 
 
 def clear_screen():
-    """Clear the terminal screen cross-platform."""
-    os.system("cls" if os.name == "nt" else "clear")
+    """Clear the terminal screen cross-platform using subprocess."""
+    cmd = "cls" if os.name == "nt" else "clear"
+    subprocess.run([cmd], check=False)
 
-
-def read_dont_touch():
-    """Read the first and second lines from dont_touch.txt."""
-    try:
-        with open(os.path.join(script_dir, "dont_touch.txt"), "r") as file:
-            lines = file.readlines()
-            if len(lines) < 2:
-                raise ValueError("dont_touch.txt does not have at least two lines")
-            return lines[0].strip(), lines[1].strip()
-    except (FileNotFoundError, IOError, ValueError):
-        print(
-            "Someone deleted or modified the dont_touch.txt file used for storing important data."
-        )
-        print(
-            "You can't use the functionality anymore. You'll have to edit the appropriate files manually."
-        )
-        print("Check the scripts inside the tools folder for guidance.")
-        sys.exit(1)
 
 def display_menu():
     """Display the main menu options."""
     clear_screen()
 
-    first_line, second_line = read_dont_touch()
 
-    print(f"Current Plugin Name: {first_line}")
-    print(f"Current Targeted Godot Version: {second_line}\n")
+    plugin_name = config.getPluginName()
+    godot_version = config.getGodotVersion()
+
+
+    print(f"Current Plugin Name: {plugin_name}")
+    print(f"Current Targeted Godot Version: {godot_version}\n")
 
     print("Choose an option:")
-    print("1. Change Godot Target Version")
-    print("2. Change Build Profile")
-    print("3. Rename Plugin")
-    print("4. Compile Plugin Debug Build")
-    print("5. Generate Missing XML Documentation Files")
-    print("6. Tutorials And Help With Godot C++")
-    print("Enter your choice (1-6), or 'q' to quit: ")
+    print("1. Update godot_cpp Submodule To Latest")
+    print("2. Change Godot Target Version")
+    print("3. Change Build Profile")
+    print("4. Rename Plugin")
+    print("5. Compile Plugin Debug Build")
+    print("6. Compile Plugin Release Build")
+    print("7. Generate Missing XML Documentation Files")
+    print("8. Tutorials And Help With Godot C++")
+    print("Enter your choice (0-6), or 'q' to quit: ")
 
 
 def run_tool_script(script_filename):
@@ -61,7 +51,7 @@ def handle_option(choice):
     """Handle the selected menu option."""
     clear_screen()
 
-    valid_choices = {"1", "2", "3", "4", "5", "6"}
+    valid_choices = {"1", "2", "3", "4", "5", "6", "7", "8"}
 
     if choice not in valid_choices:
         print("Invalid choice. Please enter a valid option or 'q' to quit.")
@@ -69,12 +59,14 @@ def handle_option(choice):
         return
 
     script_map = {
-        "1": "change_version.py",
-        "2": "change_build_profile.py",
-        "3": "renaming.py",
-        "4": "compile_debug_build.py",
-        "5": "generate_xml_docs.py",
-        "6": "tutorials.py"
+        "1": "update_godot_cpp.py",
+        "2": "change_godot_target_version.py",
+        "3": "change_build_profile.py",
+        "4": "renaming.py",
+        "5": "compile_debug_build.py",
+        "6": "compile_release_build.py",
+        "7": "generate_xml_docs.py",
+        "8": "tutorials.py"
     }
 
     script_name = script_map.get(choice)
@@ -98,6 +90,7 @@ def main():
 
 
         handle_option(user_input)
+        config.reload()
 
 
 if __name__ == "__main__":

@@ -87,7 +87,7 @@
     "README.md",
     "SConstruct",
     ".gitignore",
-    ".github",
+    //".github",
     "godot-cpp"
   ],
   "project_panel": {
