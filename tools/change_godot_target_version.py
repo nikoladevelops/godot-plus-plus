@@ -2,6 +2,7 @@ import json
 import sys
 
 from config_manager import config
+from gdextension_file_helper import set_compatibility_minimum
 from paths import GDEXTENSION_APIS_PATH
 
 
@@ -84,6 +85,7 @@ def select_godot_target_version():
 
                 # Update config.json
                 config.setGodotVersion(selected["version"])
+                set_compatibility_minimum(selected["version"])
 
                 print(f"\nSuccessfully updated to Godot Version {selected['version']}!")
                 print(f"Active file: {selected['file_name']}")

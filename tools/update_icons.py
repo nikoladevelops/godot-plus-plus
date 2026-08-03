@@ -4,10 +4,13 @@ from pathlib import Path
 
 from config_manager import config
 from gdextension_file_helper import update_icons_in_gdextension
-from paths import PROJECT_ROOT
+from paths import (
+    ICONS_SOURCE_DIR,
+    get_gdextension_file_path,
+    get_godot_project_dir,
+    get_plugin_dir,
+)
 from scons_helpers import clear_screen
-
-ICONS_SOURCE_DIR = PROJECT_ROOT / "icons"
 
 
 def print_instructions_and_prompt(project_folder: str, plugin_name: str) -> bool:
@@ -77,10 +80,10 @@ def update_gdextension_icons():
     if not print_instructions_and_prompt(project_folder, plugin_name):
         return
 
-    # Base paths
-    project_path = PROJECT_ROOT / project_folder
-    plugin_dir = project_path / plugin_name
-    gdextension_file = plugin_dir / f"{plugin_name}.gdextension"
+    # Derive paths using central helpers from paths.py
+    project_path = get_godot_project_dir()
+    plugin_dir = get_plugin_dir()
+    gdextension_file = get_gdextension_file_path()
     project_icons_dest = plugin_dir / "icons"
     godot_imported_dir = project_path / ".godot" / "imported"
 
@@ -121,7 +124,8 @@ def update_gdextension_icons():
         icon_mappings[node_name] = res_path
         print(f"Copied & Mapped: {node_name} -> {res_path}")
 
-    update_icons_in_gdextension(gdextension_file, icon_mappings)
+    # Pass default path (handles resolving get_gdextension_file_path() automatically)
+    update_icons_in_gdextension(icon_mappings)
     print(f"\nSuccessfully updated {len(icon_mappings)} icon(s) in '{gdextension_file.name}'!")
 
 
