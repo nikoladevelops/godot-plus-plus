@@ -58,3 +58,6 @@ ios.debug = {
 ios.release = {
   "./bin/ios/libplugin_name.ios.template_release.single.xcframework": ""
 }
+
+[icons]
+ItemData = "res://plugin_name/icons/ItemData.svg"

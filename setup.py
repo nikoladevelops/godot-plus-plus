@@ -34,7 +34,9 @@ def display_menu():
     print("6. Compile Plugin Release Build")
     print("7. Generate Missing XML Documentation Files")
     print("8. Change LTO Mode For Release Builds")
-    print("9. Tutorials And Help With Godot C++")
+    print("9. Update Editor Node Icons")
+
+    print("15. Tutorials And Help With Godot C++")
 
     print("Enter your choice (0-9), or 'q' to quit: ")
 
@@ -53,7 +55,7 @@ def handle_option(choice):
     """Handle the selected menu option."""
     clear_screen()
 
-    valid_choices = {"1", "2", "3", "4", "5", "6", "7", "8", "9"}
+    valid_choices = {"1", "2", "3", "4", "5", "6", "7", "8", "9", "15"}
 
     if choice not in valid_choices:
         print("Invalid choice. Please enter a valid option or 'q' to quit.")
@@ -69,7 +71,8 @@ def handle_option(choice):
         "6": "compile_release_build.py",
         "7": "generate_xml_docs.py",
         "8": "change_lto_mode.py",
-        "9": "tutorials.py"
+        "9": "update_icons.py",
+        "15": "tutorials.py"
     }
 
     script_name = script_map.get(choice)

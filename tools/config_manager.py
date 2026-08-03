@@ -11,7 +11,8 @@ class _PluginConfig:
             "pluginName": "plugin_name",
             "godotVersion": "4.7",
             "godotPath": "GODOT_ENGINE_PATH_GOES_HERE",
-            "ltoMode": "none"  # Default: none, options: none, auto, thin, full
+            "godotProjectFolder": "test_project",
+            "ltoMode": "none"
         }
 
         if self.config_path.exists():
@@ -20,12 +21,10 @@ class _PluginConfig:
             self._save_config()
 
     def _read_config(self):
-        """Internal helper to read the JSON file into memory."""
         with open(self.config_path, "r", encoding="utf-8") as f:
             self.data = json.load(f)
 
     def _save_config(self):
-        """Internal helper to write the memory dictionary back to JSON."""
         with open(self.config_path, "w", encoding="utf-8") as f:
             json.dump(self.data, f, indent=2)
 
@@ -44,10 +43,18 @@ class _PluginConfig:
 
     def getPluginName(self) -> str:
         self.reload()
-        return self.data.get("pluginName", "")
+        return self.data.get("pluginName", "plugin_name")
 
     def setPluginName(self, new_name: str) -> None:
         self.data["pluginName"] = new_name
+        self._save_config()
+
+    def getGodotProjectFolder(self) -> str:
+        self.reload()
+        return self.data.get("godotProjectFolder", "test_project")
+
+    def setGodotProjectFolder(self, new_folder: str) -> None:
+        self.data["godotProjectFolder"] = new_folder
         self._save_config()
 
     def getLtoMode(self) -> str:

@@ -65,10 +65,10 @@ using namespace godot;
 // You can inherit from other classes, like Node, Node2D, Node3D, even MultiMeshInsance2D etc...
 // That would actually allow you to place your custom class inside the scene tree, so you can use it like any other node
 // and you will have functions like _ready(), _process(), _physics_process() etc...
-class ItemData : public Resource { // Right now inheriting from Resource, just as a simple example
+class ItemData : public Node { // Right now inheriting from Resource, just as a simple example
 	// WARNING: Always have this GDCLASS macro when making custom classes that you want visible in your Godot project
 	// and as a second argument always pass the class you are inheriting from
-	GDCLASS(ItemData, Resource)
+	GDCLASS(ItemData, Node)
 
 // WARNING: Always have this when making custom classes that you want visible in your Godot project
 // In this _bind_methods() function you will bind your methods to Godot, so they can be called from GDScript or other languages
