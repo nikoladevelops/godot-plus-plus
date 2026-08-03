@@ -12,7 +12,9 @@ class _PluginConfig:
             "godotVersion": "4.7",
             "godotPath": "GODOT_ENGINE_PATH_GOES_HERE",
             "godotProjectFolder": "test_project",
-            "ltoMode": "none"
+            "ltoMode": "none",
+            "selectedBuildProfile": "none",
+            "extensionApiPath": "godot-cpp/gdextension/extension_api.json"
         }
 
         if self.config_path.exists():
@@ -63,6 +65,22 @@ class _PluginConfig:
 
     def setLtoMode(self, new_lto: str) -> None:
         self.data["ltoMode"] = new_lto
+        self._save_config()
+
+    def getSelectedBuildProfile(self) -> str:
+        self.reload()
+        return self.data.get("selectedBuildProfile", "none")
+
+    def setSelectedBuildProfile(self, new_profile: str) -> None:
+        self.data["selectedBuildProfile"] = new_profile
+        self._save_config()
+
+    def getExtensionApiPath(self) -> str:
+        self.reload()
+        return self.data.get("extensionApiPath", "")
+
+    def setExtensionApiPath(self, new_api_path: str) -> None:
+        self.data["extensionApiPath"] = str(new_api_path)
         self._save_config()
 
 

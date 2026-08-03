@@ -3,7 +3,7 @@ import sys
 
 from config_manager import config
 from gdextension_file_helper import set_compatibility_minimum
-from paths import GDEXTENSION_APIS_PATH
+from paths import GDEXTENSION_APIS_PATH, PROJECT_ROOT
 
 
 def discover_extension_apis():
@@ -37,12 +37,21 @@ def discover_extension_apis():
 
             if major is not None and minor is not None:
                 version_str = f"{major}.{minor}"
+
+                # Compute path relative to PROJECT_ROOT
+                try:
+                    relative_path = file_path.relative_to(PROJECT_ROOT).as_posix()
+                except ValueError:
+                    # Fallback to as_posix string if not under PROJECT_ROOT
+                    relative_path = file_path.as_posix()
+
                 available_versions.append({
                     "version": version_str,
                     "major": major,
                     "minor": minor,
                     "file_name": file_path.name,
-                    "path": file_path
+                    "path": file_path,
+                    "relative_path": relative_path
                 })
         except (json.JSONDecodeError, OSError) as e:
             print(f"Warning: Failed to read {file_path.name}: {e}")
@@ -50,6 +59,7 @@ def discover_extension_apis():
     # Sort versions
     available_versions.sort(key=lambda x: (x["major"], x["minor"]), reverse=True)
     return available_versions
+
 
 def select_godot_target_version():
     print("Tool For Switching Godot Target Version By @realNikich\n")
@@ -66,7 +76,7 @@ def select_godot_target_version():
 
     for idx, item in enumerate(versions, start=1):
         is_current = " (Current)" if item["version"] == current_config_version else ""
-        print(f"  [{idx}] Godot {item['version']}({item['file_name']}){is_current}" )
+        print(f"  [{idx}] Godot {item['version']} ({item['file_name']}){is_current}")
 
     print("  [q] Quit without changing")
     print("\nWarning: After changing the Godot target version, you need to recompile your code for the changes to take effect.\n")
@@ -83,12 +93,15 @@ def select_godot_target_version():
             if 1 <= choice_num <= len(versions):
                 selected = versions[choice_num - 1]
 
-                # Update config.json
+                # Save version and relative API path in config.json
                 config.setGodotVersion(selected["version"])
+                config.setExtensionApiPath(selected["relative_path"])
+
+                # Update .gdextension compatibility minimum
                 set_compatibility_minimum(selected["version"])
 
                 print(f"\nSuccessfully updated to Godot Version {selected['version']}!")
-                print(f"Active file: {selected['file_name']}")
+                print(f"Active API Path: {selected['relative_path']}")
                 print("Please recompile for changes to take effect..")
                 input("\nPress Enter to continue...")
                 return selected

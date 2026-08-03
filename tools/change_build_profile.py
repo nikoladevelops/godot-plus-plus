@@ -7,9 +7,12 @@ from pathlib import Path
 from typing import List, Set, Tuple, Dict
 
 SCRIPT_DIR = os.path.dirname(os.path.abspath(__file__))
-PARENT_DIR = os.path.normpath(os.path.join(SCRIPT_DIR, ".."))
-SCONSTRUCT_PATH = os.path.join(PARENT_DIR, "SConstruct")
-API_JSON_PATH = os.path.join(PARENT_DIR, "godot-cpp", "gdextension", "extension_api.json")
+PARENT_DIR = os.path.normpath(os.path.join(SCRIPT_DIR, "..")) ## TODO Replace with PROJECT_ROOT from paths.py
+
+from paths import SCONSTRUCT_PATH
+
+API_JSON_PATH = os.path.join(PARENT_DIR, "godot-cpp", "gdextension", "extension_api.json") # TODO whenever a GODOT version is saved, save it's extension api path as well.
+
 
 def read_file(file_path: str) -> str:
     try:
@@ -180,7 +183,7 @@ def find_used_classes(source_dirs: List[str], include_dirs: List[str]) -> Set[st
         "godot-cpp/src"
     ]
     dirs_to_scan = [os.path.join(PARENT_DIR, d) for d in source_dirs + include_dirs + additional_dirs]
-    
+
     # Load all valid class names from the API
     api_content = read_file(API_JSON_PATH)
     api = json.loads(api_content)
@@ -219,7 +222,7 @@ def find_used_classes(source_dirs: List[str], include_dirs: List[str]) -> Set[st
                 path = os.path.join(root, file)
                 scanned_files.append(path)
                 content = read_file(path)
-                
+
                 # Check #include directives
                 for line in content.splitlines():
                     if line.strip().startswith('#include'):

@@ -3,5 +3,7 @@
   "godotVersion": "4.7",
   "godotPath": "GODOT_ENGINE_PATH_GOES_HERE",
   "godotProjectFolder": "test_project",
-  "ltoMode": "none"
+  "ltoMode": "none",
+  "selectedBuildProfile": "none",
+  "extensionApiPath": "godot-cpp/gdextension/extension_api.json"
 }
