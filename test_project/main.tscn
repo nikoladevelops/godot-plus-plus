@@ -4,5 +4,3 @@
 
 [node name="Main" type="Node2D" unique_id=2124938054]
 script = ExtResource("1_ig7tw")
-
-[node name="ItemData" type="ItemData" parent="." unique_id=328201555]

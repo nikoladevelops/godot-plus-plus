@@ -1,9 +1,9 @@
-import os
 import shutil
 import sys
 from pathlib import Path
 
 from config_manager import config
+from gdextension_file_helper import update_icons_in_gdextension
 from paths import PROJECT_ROOT
 from scons_helpers import clear_screen
 
@@ -56,14 +56,12 @@ def clean_destination_directory(project_icons_dest: Path, godot_imported_dir: Pa
     # Re-create fresh destination directory
     project_icons_dest.mkdir(parents=True, exist_ok=True)
 
-    # Also check and clean .godot/imported cache for icon files to prevent stale import loops
+    # Clean .godot/imported cache for icon files to prevent stale import loops
     if godot_imported_dir.exists():
         for imported_file in godot_imported_dir.glob("*.md5"):
-            # Godot generates <filename>.<ext>-<hash>.md5 inside .godot/imported/
             if "icons" in imported_file.name or "svg" in imported_file.name:
                 try:
                     imported_file.unlink(missing_ok=True)
-                    # Delete corresponding .stex / .ctex file if present
                     stex_file = imported_file.with_suffix(".stex")
                     ctex_file = imported_file.with_suffix(".ctex")
                     stex_file.unlink(missing_ok=True)
@@ -110,8 +108,8 @@ def update_gdextension_icons():
     # Wipe destination icons folder & import cache
     clean_destination_directory(project_icons_dest, godot_imported_dir)
 
-    # Copy fresh SVGs
-    icon_entries = []
+    # Copy fresh SVGs and build mapping dictionary
+    icon_mappings = {}
     print("\nCopying Fresh Icons:")
     for svg_file in svg_files:
         node_name = svg_file.stem  # e.g., 'ItemData'
@@ -120,33 +118,11 @@ def update_gdextension_icons():
         shutil.copy2(svg_file, dest_file)
 
         res_path = f"res://{plugin_name}/icons/{svg_file.name}"
-        icon_entries.append(f'{node_name} = "{res_path}"')
-        print(f"  ✔ Copied & Mapped: {node_name} -> {res_path}")
+        icon_mappings[node_name] = res_path
+        print(f"Copied & Mapped: {node_name} -> {res_path}")
 
-    # Update .gdextension file cleanly
-    lines = gdextension_file.read_text(encoding="utf-8").splitlines()
-
-    new_lines = []
-    inside_icons_block = False
-
-    for line in lines:
-        stripped = line.strip()
-        if stripped == "[icons]":
-            inside_icons_block = True
-            continue
-
-        if inside_icons_block and stripped.startswith("[") and stripped.endswith("]"):
-            inside_icons_block = False
-
-        if not inside_icons_block:
-            new_lines.append(line)
-
-    clean_content = "\n".join(new_lines).rstrip()
-    icons_block = "\n\n[icons]\n" + "\n".join(sorted(icon_entries)) + "\n"
-    final_content = clean_content + icons_block
-
-    gdextension_file.write_text(final_content, encoding="utf-8")
-    print(f"\nSuccessfully updated {len(icon_entries)} icon(s) in '{gdextension_file.name}'!")
+    update_icons_in_gdextension(gdextension_file, icon_mappings)
+    print(f"\nSuccessfully updated {len(icon_mappings)} icon(s) in '{gdextension_file.name}'!")
 
 
 if __name__ == "__main__":
