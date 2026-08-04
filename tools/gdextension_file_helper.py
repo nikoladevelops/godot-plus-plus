@@ -5,6 +5,57 @@ from typing import Dict, List, Optional
 from paths import get_gdextension_file_path
 
 
+def set_editor_target_mode(mode: str, file_path: Optional[Path] = None) -> None:
+    """
+    Updates all `.debug` target entries in [libraries] and [dependencies] inside the
+    .gdextension file to point to either 'template_debug' binaries (mode="debug")
+    or 'template_release' binaries (mode="release").
+    """
+    target_path = get_target_gdextension_path(file_path)
+
+    if not target_path.exists():
+        raise FileNotFoundError(f"GDExtension file not found at: {target_path}")
+
+    content = target_path.read_text(encoding="utf-8")
+    lines = content.splitlines()
+    updated_lines = []
+
+    current_section = ""
+    in_debug_block = False
+
+    for line in lines:
+        stripped = line.strip()
+
+        # Track sections
+        if stripped.startswith("[") and stripped.endswith("]"):
+            current_section = stripped.lower()
+            in_debug_block = False
+            updated_lines.append(line)
+            continue
+
+        # Only process inside [libraries] and [dependencies]
+        if current_section in ["[libraries]", "[dependencies]"]:
+            # Check for starting key declarations like `ios.debug = {` or `windows.debug.x86_64 = ...`
+            if "=" in line and not stripped.startswith(";"):
+                key_part = line.split("=", 1)[0].strip()
+                in_debug_block = ".debug" in key_part
+
+            # If we are inside a .debug key assignment or inside a multi-line .debug block
+            if in_debug_block:
+                if mode == "release":
+                    line = line.replace("template_debug", "template_release")
+                else:
+                    line = line.replace("template_release", "template_debug")
+
+            # Reset block state when multi-line dictionary closes
+            if "}" in line:
+                in_debug_block = False
+
+        updated_lines.append(line)
+
+    target_path.write_text("\n".join(updated_lines) + "\n", encoding="utf-8")
+
+
 def set_reloadable(reloadable: bool, file_path: Optional[Path] = None) -> None:
     """
     Updates or inserts the `reloadable` key under [configuration]

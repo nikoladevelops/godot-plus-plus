@@ -38,6 +38,7 @@ def display_menu():
     print("10. Edit Build Profile")
     print("11. Hot Reloading Options")
     print("12. Select Godot Project Folder")
+    print("13. Toggle Editor Build Target")
 
     print("15. Tutorials And Help With Godot C++")
 
@@ -58,7 +59,7 @@ def handle_option(choice):
     """Handle the selected menu option."""
     clear_screen()
 
-    valid_choices = {"1", "2", "3", "4", "5", "6", "7", "8", "9", "10", "11", "12", "15"}
+    valid_choices = {"1", "2", "3", "4", "5", "6", "7", "8", "9", "10", "11", "12", "13", "15"}
 
     if choice not in valid_choices:
         print("Invalid choice. Please enter a valid option or 'q' to quit.")
@@ -78,6 +79,7 @@ def handle_option(choice):
         "10": "edit_build_profile.py",
         "11": "toggle_reloadable.py",
         "12": "select_godot_project.py",
+        "13": "toggle_editor_target.py",
         "15": "tutorials.py"
     }
 

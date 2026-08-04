@@ -14,7 +14,8 @@ class _PluginConfig:
             "ltoMode": "none",
             "selectedBuildProfile": "none",
             "extensionApiPath": "godot-cpp/gdextension/extension_api.json",
-            "reloadable": True
+            "reloadable": True,
+            "editorTargetMode": "debug"
         }
 
         if self.config_path.exists():
@@ -89,6 +90,14 @@ class _PluginConfig:
 
     def setReloadable(self, is_reloadable: bool) -> None:
         self.data["reloadable"] = is_reloadable
+        self._save_config()
+
+    def getEditorTargetMode(self) -> str:
+        self.reload()
+        return self.data.get("editorTargetMode", "debug")
+
+    def setEditorTargetMode(self, mode: str) -> None:
+        self.data["editorTargetMode"] = mode
         self._save_config()
 
 
