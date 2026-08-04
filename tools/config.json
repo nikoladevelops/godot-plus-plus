@@ -1,7 +1,13 @@
 {
   "pluginName": "plugin_name",
   "godotVersion": "4.7",
-  "godotPath": "GODOT_ENGINE_PATH_GOES_HERE",
+  "godotActivePath": "/usr/bin/godot",
+  "savedGodotPaths": [
+    {
+      "path": "/usr/bin/godot",
+      "version": "4.7.1.stable.arch_linux.a13da4feb"
+    }
+  ],
   "godotProjectFolder": "test_project",
   "ltoMode": "none",
   "selectedBuildProfile": "build_profile.json",

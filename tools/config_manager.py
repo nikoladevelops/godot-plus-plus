@@ -1,4 +1,6 @@
 import json
+from typing import Dict, List
+
 from paths import CONFIG_PATH
 
 
@@ -9,13 +11,14 @@ class _PluginConfig:
         self.data = {
             "pluginName": "plugin_name",
             "godotVersion": "4.7",
-            "godotPath": "GODOT_ENGINE_PATH_GOES_HERE",
+            "godotActivePath": "",
+            "savedGodotPaths": [],
             "godotProjectFolder": "test_project",
             "ltoMode": "none",
-            "selectedBuildProfile": "none",
+            "selectedBuildProfile": "build_profile.json",
             "extensionApiPath": "godot-cpp/gdextension/extension_api.json",
             "reloadable": True,
-            "editorTargetMode": "debug"
+            "editorTargetMode": "debug",
         }
 
         if self.config_path.exists():
@@ -23,11 +26,11 @@ class _PluginConfig:
         else:
             self._save_config()
 
-    def _read_config(self):
+    def _read_config(self) -> None:
         with open(self.config_path, "r", encoding="utf-8") as f:
             self.data = json.load(f)
 
-    def _save_config(self):
+    def _save_config(self) -> None:
         with open(self.config_path, "w", encoding="utf-8") as f:
             json.dump(self.data, f, indent=2)
 
@@ -70,7 +73,7 @@ class _PluginConfig:
 
     def getSelectedBuildProfile(self) -> str:
         self.reload()
-        return self.data.get("selectedBuildProfile", "none")
+        return self.data.get("selectedBuildProfile", "")
 
     def setSelectedBuildProfile(self, new_profile: str) -> None:
         self.data["selectedBuildProfile"] = new_profile
@@ -98,6 +101,57 @@ class _PluginConfig:
 
     def setEditorTargetMode(self, mode: str) -> None:
         self.data["editorTargetMode"] = mode
+        self._save_config()
+
+    def getGodotActivePath(self) -> str:
+        """Returns the active Godot engine executable path."""
+        self.reload()
+        return self.data.get("godotActivePath", "")
+
+    def setGodotActivePath(self, new_path: str) -> None:
+        """Sets the active godotActivePath in configuration."""
+        self.data["godotActivePath"] = str(new_path).strip()
+        self._save_config()
+
+    def getSavedGodotPaths(self) -> List[Dict[str, str]]:
+        """Returns the saved Godot path dictionaries: [{'path': '...', 'version': '...'}, ...]"""
+        self.reload()
+        return self.data.get("savedGodotPaths", [])
+
+    def addSavedGodotPath(self, new_path: str, version: str = "Unknown") -> None:
+        """Adds or updates a path entry inside savedGodotPaths."""
+        self.reload()
+        paths = self.data.get("savedGodotPaths", [])
+        cleaned_path = str(new_path).strip()
+
+        if not cleaned_path:
+            return
+
+        for entry in paths:
+            if entry["path"] == cleaned_path:
+                entry["version"] = version
+                self._save_config()
+                return
+
+        paths.append({"path": cleaned_path, "version": version})
+        self.data["savedGodotPaths"] = paths
+        self._save_config()
+
+    def removeSavedGodotPath(self, path_to_remove: str) -> None:
+        """
+        Removes a path entry from savedGodotPaths.
+        If the path being removed is currently active, clears godotActivePath to "".
+        """
+        self.reload()
+        cleaned_remove = str(path_to_remove).strip()
+        paths = self.data.get("savedGodotPaths", [])
+
+        new_paths = [p for p in paths if p.get("path") != cleaned_remove]
+        self.data["savedGodotPaths"] = new_paths
+
+        if self.data.get("godotActivePath") == cleaned_remove:
+            self.data["godotActivePath"] = ""
+
         self._save_config()
 
 

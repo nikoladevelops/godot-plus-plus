@@ -6,6 +6,24 @@ from tools.config_manager import config
 
 script_dir = os.path.dirname(os.path.abspath(__file__))
 
+MENU_ITEMS = [
+    ("Update godot_cpp Submodule To Latest", "update_godot_cpp.py"),
+    ("Change Godot Target Version", "change_godot_target_version.py"),
+    ("Select Build Profile", "select_build_profile.py"),
+    ("Rename Plugin", "renaming.py"),
+    ("Compile Plugin Debug Build", "compile_debug_build.py"),
+    ("Compile Plugin Release Build", "compile_release_build.py"),
+    ("Generate Missing XML Documentation Files", "generate_xml_docs.py"),
+    ("Change LTO Mode For Release Builds", "change_lto_mode.py"),
+    ("Update Editor Node Icons", "update_icons.py"),
+    ("Edit Build Profile", "edit_build_profile.py"),
+    ("Hot Reloading Options", "toggle_reloadable.py"),
+    ("Select Godot Project Folder", "select_godot_project.py"),
+    ("Toggle Editor Build Target", "toggle_editor_target.py"),
+    ("Select Godot Engine Executable Path", "select_godot_path.py"),
+    ("Tutorials And Help With Godot C++", "tutorials.py"),
+]
+
 
 def clear_screen():
     """Clear the terminal screen cross-platform using subprocess."""
@@ -13,36 +31,46 @@ def clear_screen():
     subprocess.run([cmd], check=False)
 
 
-def display_menu():
-    """Display the main menu options."""
-    clear_screen()
+def get_active_path_version() -> str:
+    """Helper to find the version tag of the currently active Godot path."""
+    active_path = config.getGodotActivePath()
+    if not active_path:
+        return "None Set"
 
+    saved_entries = config.getSavedGodotPaths()
+    for entry in saved_entries:
+        if entry.get("path") == active_path:
+            return entry.get("version", "Unknown")
+
+    return "Unknown"
+
+
+def display_menu():
+    """Display the main menu options dynamically from MENU_ITEMS."""
+    clear_screen()
 
     plugin_name = config.getPluginName()
     godot_version = config.getGodotVersion()
-
+    godot_path = config.getGodotActivePath()
+    project_folder = config.getGodotProjectFolder()
+    build_profile = config.getSelectedBuildProfile()
+    active_version = get_active_path_version()
 
     print(f"Current Plugin Name: {plugin_name}")
-    print(f"Current Targeted Godot Version: {godot_version}\n")
+    print(f"Current Targeted Godot Version: {godot_version}")
+    print(f"Selected Godot Project Folder: {project_folder or 'NONE'}")
+    print(f"Selected Build Profile: {build_profile or 'NONE'}")
+
+    if godot_path:
+        print(f"Active Godot Engine Path: {godot_path} ({active_version})\n")
+    else:
+        print("Active Godot Engine Path: NONE\n")
 
     print("Choose an option:")
-    print("1. Update godot_cpp Submodule To Latest")
-    print("2. Change Godot Target Version")
-    print("3. Select Build Profile")
-    print("4. Rename Plugin")
-    print("5. Compile Plugin Debug Build")
-    print("6. Compile Plugin Release Build")
-    print("7. Generate Missing XML Documentation Files")
-    print("8. Change LTO Mode For Release Builds")
-    print("9. Update Editor Node Icons")
-    print("10. Edit Build Profile")
-    print("11. Hot Reloading Options")
-    print("12. Select Godot Project Folder")
-    print("13. Toggle Editor Build Target")
+    for idx, (title, _) in enumerate(MENU_ITEMS, start=1):
+        print(f"{idx}. {title}")
 
-    print("15. Tutorials And Help With Godot C++")
-
-    print("Enter your choice (0-9), or 'q' to quit: ")
+    print("\nEnter your choice, or 'q' to quit: ")
 
 
 def run_tool_script(script_filename):
@@ -56,45 +84,21 @@ def run_tool_script(script_filename):
 
 
 def handle_option(choice):
-    """Handle the selected menu option."""
+    """Handle the selected menu option using 1-based indexing."""
     clear_screen()
 
-    valid_choices = {"1", "2", "3", "4", "5", "6", "7", "8", "9", "10", "11", "12", "13", "15"}
-
-    if choice not in valid_choices:
-        print("Invalid choice. Please enter a valid option or 'q' to quit.")
-        input("Press Enter to continue...")
-        return
-
-    script_map = {
-        "1": "update_godot_cpp.py",
-        "2": "change_godot_target_version.py",
-        "3": "select_build_profile.py",
-        "4": "renaming.py",
-        "5": "compile_debug_build.py",
-        "6": "compile_release_build.py",
-        "7": "generate_xml_docs.py",
-        "8": "change_lto_mode.py",
-        "9": "update_icons.py",
-        "10": "edit_build_profile.py",
-        "11": "toggle_reloadable.py",
-        "12": "select_godot_project.py",
-        "13": "toggle_editor_target.py",
-        "15": "tutorials.py"
-    }
-
-    script_name = script_map.get(choice)
-    if script_name:
+    if choice.isdigit() and 1 <= int(choice) <= len(MENU_ITEMS):
+        _, script_name = MENU_ITEMS[int(choice) - 1]
         run_tool_script(script_name)
     else:
-        print("Invalid option.")
+        print("Invalid choice. Please enter a valid option or 'q' to quit.")
         input("Press Enter to continue...")
 
 
 def main():
     """Main loop to display menu and handle user input."""
-
     while True:
+        config.reload()
         display_menu()
         user_input = input().strip().lower()
 
@@ -102,9 +106,7 @@ def main():
             print("Quitting...")
             sys.exit(0)
 
-
         handle_option(user_input)
-        config.reload()
 
 
 if __name__ == "__main__":

@@ -5,6 +5,7 @@ from gdextension_file_helper import set_editor_target_mode
 from paths import get_gdextension_file_path
 from scons_helpers import clear_screen
 
+
 def display_info_and_recommendations():
     print("-" * 75)
     print("ABOUT EDITOR BUILD TARGET (template_debug vs template_release):")
