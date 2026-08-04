@@ -5,6 +5,36 @@ from typing import Dict, List, Optional
 from paths import get_gdextension_file_path
 
 
+def set_reloadable(reloadable: bool, file_path: Optional[Path] = None) -> None:
+    """
+    Updates or inserts the `reloadable` key under [configuration]
+    in the .gdextension manifest using strict lowercase booleans (reloadable = true / false).
+    """
+    target_path = get_target_gdextension_path(file_path)
+
+    if not target_path.exists():
+        raise FileNotFoundError(f"GDExtension file not found at: {target_path}")
+
+    content = target_path.read_text(encoding="utf-8")
+    value_str = "true" if reloadable else "false"
+
+    # Matches reloadable = true or reloadable = false (case-insensitive search)
+    pattern = r'(reloadable\s*=\s*)(true|false|True|False)'
+
+    if re.search(pattern, content):
+        updated_content = re.sub(pattern, f'\\g<1>{value_str}', content)
+    else:
+        if "[configuration]" in content:
+            updated_content = content.replace(
+                "[configuration]\n",
+                f'[configuration]\nreloadable = {value_str}\n',
+                1,
+            )
+        else:
+            updated_content = f'[configuration]\nreloadable = {value_str}\n\n' + content
+
+    target_path.write_text(updated_content, encoding="utf-8")
+
 def get_target_gdextension_path(custom_path: Optional[Path] = None) -> Path:
     """Utility to resolve custom_path or default to get_gdextension_file_path()."""
     return custom_path if custom_path is not None else get_gdextension_file_path()

@@ -5,5 +5,6 @@
   "godotProjectFolder": "test_project",
   "ltoMode": "none",
   "selectedBuildProfile": "build_profile.json",
-  "extensionApiPath": "godot-cpp/gdextension/extension_api.json"
+  "extensionApiPath": "godot-cpp/gdextension/extension_api.json",
+  "reloadable": true
 }

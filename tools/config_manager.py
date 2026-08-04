@@ -1,5 +1,4 @@
 import json
-
 from paths import CONFIG_PATH
 
 
@@ -14,7 +13,8 @@ class _PluginConfig:
             "godotProjectFolder": "test_project",
             "ltoMode": "none",
             "selectedBuildProfile": "none",
-            "extensionApiPath": "godot-cpp/gdextension/extension_api.json"
+            "extensionApiPath": "godot-cpp/gdextension/extension_api.json",
+            "reloadable": True
         }
 
         if self.config_path.exists():
@@ -81,6 +81,14 @@ class _PluginConfig:
 
     def setExtensionApiPath(self, new_api_path: str) -> None:
         self.data["extensionApiPath"] = str(new_api_path)
+        self._save_config()
+
+    def getReloadable(self) -> bool:
+        self.reload()
+        return self.data.get("reloadable", True)
+
+    def setReloadable(self, is_reloadable: bool) -> None:
+        self.data["reloadable"] = is_reloadable
         self._save_config()
 
 
