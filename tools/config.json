@@ -4,6 +4,6 @@
   "godotPath": "GODOT_ENGINE_PATH_GOES_HERE",
   "godotProjectFolder": "test_project",
   "ltoMode": "none",
-  "selectedBuildProfile": "none",
+  "selectedBuildProfile": "build_profile.json",
   "extensionApiPath": "godot-cpp/gdextension/extension_api.json"
 }

@@ -3,12 +3,15 @@ import os
 import sys
 
 from methods import print_error
+from tools.config_manager import config
+from tools.paths import BUILD_PROFILES_DIR
+
 
 # Function to recursively find .cpp files in the given directories
 def find_sources(dirs, exts):
     """
     Recursively searches the specified directories for .cpp files.
-    
+
     Args:
         dirs (list): List of directory paths to search.
         exts (list): List of file extensions that are acceptable and should contain C++ code.
@@ -37,7 +40,7 @@ customs = [os.path.abspath(path) for path in customs]
 # Define GDExtension-specific options
 opts = Variables(customs, ARGUMENTS)
 opts.Add('source_dirs', 'List of source directories (comma-separated)', 'src') # Directory for source files
-opts.Add('source_exts', 'List of source file extensions (comma-separated)', '.cpp,.c,.cc,.cxx') 
+opts.Add('source_exts', 'List of source file extensions (comma-separated)', '.cpp,.c,.cc,.cxx')
 opts.Add('include_dirs', 'List of include directories (comma-separated)', 'src') # Directory for headers - some might want to create a separate include directory
 opts.Add('doc_output_dir', 'Directory for documentation output', 'gen')
 opts.Add('precision', 'Floating-point precision (single or double)', 'single')  # Default to single
@@ -53,15 +56,12 @@ opts.Add(EnumVariable(
 # You can either specify "disabled_classes", OR
 # explicitly specify "enabled_classes" which disables all other classes.
 
-is_2d_profile_used = False
-is_3d_profile_used = False
-is_custom_profile_used = True
-if is_2d_profile_used:
-    env["build_profile"] = "2d_build_profile.json"
-elif is_3d_profile_used:
-    env["build_profile"] = "3d_build_profile.json"
-elif is_custom_profile_used:
-    env["build_profile"] = "build_profile.json"
+selectedBuildProfile = config.getSelectedBuildProfile()
+if selectedBuildProfile != "none":
+    env["build_profile"] = str(BUILD_PROFILES_DIR / selectedBuildProfile)
+    print(f"Selected build profile: {selectedBuildProfile}\n")
+else:
+    print("No selected build profile\n")
 
 # Update the environment with the options
 opts.Update(env)

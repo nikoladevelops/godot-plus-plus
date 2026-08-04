@@ -11,7 +11,7 @@ PARENT_DIR = os.path.normpath(os.path.join(SCRIPT_DIR, "..")) ## TODO Replace wi
 
 from paths import SCONSTRUCT_PATH
 
-API_JSON_PATH = os.path.join(PARENT_DIR, "godot-cpp", "gdextension", "extension_api.json") # TODO whenever a GODOT version is saved, save it's extension api path as well.
+API_JSON_PATH = os.path.join(PARENT_DIR, "godot-cpp", "gdextension", "extension_api.json") # TODO use the get_selected_extension_api_path
 
 
 def read_file(file_path: str) -> str:

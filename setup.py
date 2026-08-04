@@ -28,7 +28,7 @@ def display_menu():
     print("Choose an option:")
     print("1. Update godot_cpp Submodule To Latest")
     print("2. Change Godot Target Version")
-    print("3. Change Build Profile")
+    print("3. Select Build Profile")
     print("4. Rename Plugin")
     print("5. Compile Plugin Debug Build")
     print("6. Compile Plugin Release Build")
@@ -65,7 +65,7 @@ def handle_option(choice):
     script_map = {
         "1": "update_godot_cpp.py",
         "2": "change_godot_target_version.py",
-        "3": "change_build_profile.py",
+        "3": "select_build_profile.py",
         "4": "renaming.py",
         "5": "compile_debug_build.py",
         "6": "compile_release_build.py",
