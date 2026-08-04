@@ -35,6 +35,7 @@ def display_menu():
     print("7. Generate Missing XML Documentation Files")
     print("8. Change LTO Mode For Release Builds")
     print("9. Update Editor Node Icons")
+    print("10. Edit Build Profile")
 
     print("15. Tutorials And Help With Godot C++")
 
@@ -55,7 +56,7 @@ def handle_option(choice):
     """Handle the selected menu option."""
     clear_screen()
 
-    valid_choices = {"1", "2", "3", "4", "5", "6", "7", "8", "9", "15"}
+    valid_choices = {"1", "2", "3", "4", "5", "6", "7", "8", "9", "10", "15"}
 
     if choice not in valid_choices:
         print("Invalid choice. Please enter a valid option or 'q' to quit.")
@@ -72,6 +73,7 @@ def handle_option(choice):
         "7": "generate_xml_docs.py",
         "8": "change_lto_mode.py",
         "9": "update_icons.py",
+        "10": "edit_build_profile.py",
         "15": "tutorials.py"
     }
 

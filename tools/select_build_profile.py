@@ -18,7 +18,28 @@ def clean_build_files() -> None:
 
 def select_build_profile():
     clear_screen()
-    print("Select Build Profile Tool by @realNikich\n")
+
+    print("-" * 75)
+    print("ABOUT BUILD PROFILES & BEST PRACTICES:")
+    print("-" * 75)
+    print("• compilation Speed:")
+    print("  Build profiles dramatically speed up compile times by stripping out unused Godot")
+    print("  classes from the binding headers. If a profile is inaccurate, you can edit it manually.")
+    print()
+    print("• Recommended Workflow:")
+    print("  1. Early Development: Stick to standard '2D Profile' or '3D Profile'.")
+    print("  2. Project Completion: Switch to a 'Custom Profile' (auto-detection). This generates")
+    print("     the leanest possible binary and saves huge CI/CD build time in GitHub Actions.")
+    print()
+    print("• IntelliSense & Auto-Completion Warning:")
+    print("  Do NOT use auto-detected Custom Profiles when starting a fresh project with no code.")
+    print("  Because unused classes are stripped out, your IDE's IntelliSense will not see them,")
+    print("  preventing you from auto-completing classes you haven't written yet.")
+    print()
+    print("• Target Version Warning:")
+    print("  Whenever you switch your Godot target version, ALWAYS update/regenerate your build")
+    print("  profiles! Godot frequently adds new classes or removes deprecated ones between releases.")
+    print("-" * 75 + "\n")
 
     if not BUILD_PROFILES_DIR.exists():
         BUILD_PROFILES_DIR.mkdir(parents=True, exist_ok=True)
