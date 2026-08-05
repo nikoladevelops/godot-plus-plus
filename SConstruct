@@ -5,7 +5,7 @@ import sys
 from methods import print_error
 from tools.config_manager import config
 from tools.gdextension_file_helper import sync_gdextension_to_target_project
-from tools.paths import BUILD_PROFILES_DIR, get_godot_project_dir
+from tools.paths import BUILD_PROFILES_DIR, get_plugin_dir
 
 
 # Function to recursively find .cpp files in the given directories
@@ -33,9 +33,6 @@ sync_gdextension_to_target_project()
 
 # Configuration
 libname = config.getPluginName()
-
-# Dynamically resolve active project directory
-projectdir = get_godot_project_dir()
 
 
 # Set up the environment
@@ -254,7 +251,7 @@ else:
 
 # Dynamically target the active project's plugin bin path securely
 plugin_name_str = config.getPluginName()
-install_dir = projectdir / plugin_name_str / "bin" / env['platform']
+install_dir = get_plugin_dir() / "bin" / env['platform']
 
 # Ensure target installation directory exists on disk so it never fails silently
 os.makedirs(str(install_dir), exist_ok=True)

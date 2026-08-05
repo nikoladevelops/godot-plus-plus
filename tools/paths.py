@@ -50,7 +50,7 @@ def get_godot_project_dir() -> Path:
 def get_plugin_dir() -> Path:
     """Returns the absolute Path to the plugin folder inside the selected active Godot project."""
     from config_manager import config
-    return get_godot_project_dir() / config.getPluginName()
+    return get_godot_project_dir() / "addons" / config.getPluginName()
 
 
 def get_gdextension_file_path() -> Path:

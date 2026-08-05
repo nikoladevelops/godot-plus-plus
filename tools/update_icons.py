@@ -120,7 +120,7 @@ def update_gdextension_icons():
         dest_file = project_icons_dest / svg_file.name
         shutil.copy2(svg_file, dest_file)
 
-        res_path = f"res://{plugin_name}/icons/{svg_file.name}"
+        res_path = f"res://addons/{plugin_name}/icons/{svg_file.name}"
         icon_mappings[node_name] = res_path
         print(f"Copied & Mapped: {node_name} -> {res_path}")
 
