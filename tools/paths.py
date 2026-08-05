@@ -27,6 +27,9 @@ SCONSTRUCT_PATH = PROJECT_ROOT / "SConstruct"
 # This is where your custom class reference xml files are located for doc tool generation
 DOCS_SOURCE_DIR = PROJECT_ROOT / "doc_classes"
 
+# This is where the register_types.cpp is
+SRC_DIR = PROJECT_ROOT / "src"
+
 
 def get_godot_project_dir() -> Path:
     """

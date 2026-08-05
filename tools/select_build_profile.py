@@ -18,6 +18,7 @@ def clean_build_files() -> None:
 
 def select_build_profile():
     clear_screen()
+    print("Select Build Profile Tool by @realNikich\n")
 
     print("-" * 75)
     print("ABOUT BUILD PROFILES & BEST PRACTICES:")

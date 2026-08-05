@@ -2,6 +2,9 @@
 *.gen.*
 .godot/
 
+# Ignore any 'addons' folder anywhere in the repository recursively
+addons/
+
 # Ignore the top-level bin folder
 /bin/
 

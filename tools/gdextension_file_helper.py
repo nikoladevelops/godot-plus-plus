@@ -41,6 +41,22 @@ def sync_gdextension_to_target_project() -> None:
             except OSError as e:
                 print(f"Warning: Could not remove import file: {e}")
 
+def purge_old_project_gdextension(old_name: str) -> None:
+    """
+    Safely purges the old plugin's .gdextension and .uid files from the target project directory
+    to prevent file-locking conflicts or stale metadata when renaming.
+    """
+    plugin_dir = get_plugin_dir().parent / old_name  # parent of plugin dir is addons/
+    if not plugin_dir.exists():
+        return
+
+    for ext_file in plugin_dir.glob(f"{old_name}.gdextension*"):
+        try:
+            ext_file.unlink()
+            print(f"Purged stale manifest file: {ext_file.name}")
+        except OSError as e:
+            print(f"Warning: Could not remove locked file {ext_file.name}: {e}")
+
 
 def set_editor_target_mode(mode: str, file_path: Optional[Path] = None) -> None:
     """
