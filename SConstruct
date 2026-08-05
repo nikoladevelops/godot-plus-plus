@@ -1,4 +1,3 @@
-#!/usr/init/env python
 import os
 
 from tools.apple_helpers import build_apple_framework

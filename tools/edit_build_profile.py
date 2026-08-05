@@ -3,7 +3,6 @@ import os
 import re
 import sys
 from pathlib import Path
-from typing import Dict, Set, Tuple
 
 from paths import BUILD_PROFILES_DIR, PROJECT_ROOT, get_selected_extension_api_path
 from scons_helpers import clear_screen
@@ -25,11 +24,11 @@ def write_file(file_path: Path, content: str) -> None:
         sys.exit(1)
 
 
-def _build_inheritance_map(api: dict) -> Dict[str, str]:
+def _build_inheritance_map(api: dict) -> dict[str, str]:
     return {cls.get("name"): cls.get("inherits") for cls in api.get("classes", [])}
 
 
-def _inherits_from(class_name: str, base_name: str, class_map: Dict[str, str]) -> bool:
+def _inherits_from(class_name: str, base_name: str, class_map: dict[str, str]) -> bool:
     seen = set()
     current = class_name
     while current and current not in seen:
@@ -43,7 +42,7 @@ def _inherits_from(class_name: str, base_name: str, class_map: Dict[str, str]) -
     return False
 
 
-def get_all_ancestors(class_name: str, class_map: Dict[str, str]) -> Set[str]:
+def get_all_ancestors(class_name: str, class_map: dict[str, str]) -> set[str]:
     ancestors = set()
     current = class_map.get(class_name)
     seen = set()
@@ -54,12 +53,12 @@ def get_all_ancestors(class_name: str, class_map: Dict[str, str]) -> Set[str]:
     return ancestors
 
 
-def classify_api(api_path: Path) -> Tuple[Dict[str, Set[str]], int]:
+def classify_api(api_path: Path) -> tuple[dict[str, set[str]], int]:
     content = read_file(api_path)
     api = json.loads(content)
     class_map = _build_inheritance_map(api)
 
-    buckets: Dict[str, Set[str]] = {
+    buckets: dict[str, set[str]] = {
         "2d": set(),
         "3d": set(),
         "xr": set(),
@@ -97,7 +96,7 @@ def classify_api(api_path: Path) -> Tuple[Dict[str, Set[str]], int]:
     return buckets, total_classes
 
 
-def find_used_classes(api_path: Path) -> Set[str]:
+def find_used_classes(api_path: Path) -> set[str]:
     used = set()
 
     # Scan project C++ source files and godot-cpp headers
@@ -112,7 +111,7 @@ def find_used_classes(api_path: Path) -> Set[str]:
     api = json.loads(api_content)
     valid_classes = {cls.get("name") for cls in api.get("classes", [])}
 
-    filename_to_class: Dict[str, str] = {}
+    filename_to_class: dict[str, str] = {}
 
     def pascal_to_snake(name: str) -> str:
         s1 = re.sub(r'(.)([A-Z][a-z]+)', r'\1_\2', name)
@@ -161,8 +160,8 @@ def find_used_classes(api_path: Path) -> Set[str]:
     return used
 
 
-def prompt_extra_disables() -> Dict[str, bool]:
-    extras: Dict[str, bool] = {}
+def prompt_extra_disables() -> dict[str, bool]:
+    extras: dict[str, bool] = {}
     print("\nAdditional Class Filtering Options:")
     extras["xr"] = input("Do you want to disable XR classes? (y/n): ").strip().lower() == "y"
     extras["networking"] = input("Do you want to disable Networking-related classes? (y/n): ").strip().lower() == "y"

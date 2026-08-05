@@ -1,6 +1,5 @@
 import sys
 from pathlib import Path
-from typing import List
 
 from config_manager import config
 from paths import PROJECT_ROOT
@@ -40,7 +39,7 @@ def normalize_path(user_input: str) -> Path | None:
         return None
 
 
-def discover_godot_projects() -> List[Path]:
+def discover_godot_projects() -> list[Path]:
     """
     Scans immediate subdirectories of PROJECT_ROOT for Godot projects.
     """

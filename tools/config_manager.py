@@ -1,5 +1,4 @@
 import json
-from typing import Dict, List
 
 from paths import CONFIG_PATH
 
@@ -113,7 +112,7 @@ class _PluginConfig:
         self.data["godotActivePath"] = str(new_path).strip()
         self._save_config()
 
-    def getSavedGodotPaths(self) -> List[Dict[str, str]]:
+    def getSavedGodotPaths(self) -> list[dict[str, str]]:
         """Returns the saved Godot path dictionaries: [{'path': '...', 'version': '...'}, ...]"""
         self.reload()
         return self.data.get("savedGodotPaths", [])
