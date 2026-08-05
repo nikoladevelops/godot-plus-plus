@@ -238,7 +238,7 @@ if __name__ == "__main__":
     if len(sys.argv) < 1:
         print("Usage: python renaming.py", file=sys.stderr)
         sys.exit(1)
-    
+
     print("Tool For Renaming Your GDExtension Plugin By @realNikich\n")
     print("Warning: Your plugin name will always be lowercase when used as a file or directory name. This follows the correct naming convention in Godot, so do NOT change it.")
     print("Warning: Before renaming, make sure your test project is closed and the game is not running.")

@@ -1,10 +1,10 @@
-#!/usr/bin/env python
+#!/usr/init/env python
 import os
 import sys
 
 from methods import print_error
 from tools.config_manager import config
-from tools.paths import BUILD_PROFILES_DIR
+from tools.paths import BUILD_PROFILES_DIR, get_godot_project_dir
 
 
 # Function to recursively find .cpp files in the given directories
@@ -28,7 +28,9 @@ def find_sources(dirs, exts):
 
 # Configuration
 libname = "plugin_name"
-projectdir = "test_project"
+
+# Dynamically resolve active project directory
+projectdir = get_godot_project_dir()
 
 # Set up the environment
 env = Environment(tools=["default"], PLATFORM="")
@@ -41,7 +43,7 @@ customs = [os.path.abspath(path) for path in customs]
 opts = Variables(customs, ARGUMENTS)
 opts.Add('source_dirs', 'List of source directories (comma-separated)', 'src') # Directory for source files
 opts.Add('source_exts', 'List of source file extensions (comma-separated)', '.cpp,.c,.cc,.cxx')
-opts.Add('include_dirs', 'List of include directories (comma-separated)', 'src') # Directory for headers - some might want to create a separate include directory
+opts.Add('include_dirs', 'List of include directories (comma-separated)', 'src') # Directory for headers
 opts.Add('doc_output_dir', 'Directory for documentation output', 'gen')
 opts.Add('precision', 'Floating-point precision (single or double)', 'single')  # Default to single
 opts.Add('bundle_id_prefix', 'Bundle identifier prefix (reverse-DNS format)', 'com.gdextension')  # Default prefix
@@ -105,10 +107,7 @@ if env.get("target") in ["editor", "template_debug"]:
 
 # Determine suffixes based on env (align with godot-cpp conventions)
 arch_suffix = f".{env['arch']}" if env['arch'] and env['arch'] != 'universal' else ''
-# Normalize 'threads' to a lowercase string, defaulting to 'no'
 threads_val = str(env.get('threads', 'no')).strip().lower()
-
-# Determine if '.threads' suffix should be added
 threads_suffix = '.threads' if env['platform'] == 'web' and threads_val in ('yes', 'true') else ''
 
 suffix = f".{env['platform']}.{env['target']}{arch_suffix}{threads_suffix}.{precision}"
@@ -117,7 +116,7 @@ lib_filename = f"{env.subst('$SHLIBPREFIX')}{libname}{suffix}{env.subst('$SHLIBS
 # Generate Info.plist content for macOS and iOS
 def generate_info_plist(platform, target, precision):
     framework_name = f"lib{libname}.{platform}.{target}.{precision}"
-    bundle_id = f"{bundle_id_prefix}.{libname}"  # Use configurable prefix
+    bundle_id = f"{bundle_id_prefix}.{libname}"
     if platform == 'macos':
         return f"""<?xml version="1.0" encoding="UTF-8"?>
 <!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
@@ -173,7 +172,6 @@ def generate_info_plist(platform, target, precision):
 </dict>
 </plist>"""
 
-# Function to write Info.plist content to a file
 def write_info_plist(target, source, env, plist_content):
     with open(target[0].abspath, 'w') as f:
         f.write(plist_content)
@@ -182,53 +180,46 @@ def write_info_plist(target, source, env, plist_content):
 library = None
 install_source = None
 if env['platform'] in ['macos', 'ios']:
-    # Build the shared library first in bin/{platform}
     temp_lib = env.SharedLibrary(
         f"bin/{env['platform']}/{lib_filename}",
         source=sources
     )
     if env['platform'] == 'macos':
-        # Ensure universal if specified
         if env.get('arch') != 'universal':
-            env['arch'] = 'universal'  # Fallback to universal for macOS
+            env['arch'] = 'universal'
         framework_name = f"lib{libname}.macos.{env['target']}.{precision}.framework"
         framework_binary = f"lib{libname}.macos.{env['target']}.{precision}"
         framework_dir = f"bin/{env['platform']}/{framework_name}"
-        # Create Info.plist file
         plist_file = f"{framework_dir}/Info.plist"
         env.Command(
             plist_file,
             [],
             lambda target, source, env: write_info_plist(target, source, env, generate_info_plist('macos', env['target'], precision))
         )
-        # Create the .framework structure in bin/macos
         library = env.Command(
             f"{framework_dir}/{framework_binary}",
             temp_lib,
             [
                 f"mkdir -p {framework_dir}",
                 f"cp $SOURCE $TARGET",
-                f"rm -f bin/{env['platform']}/{lib_filename}"  # Clean up temporary .dylib
+                f"rm -f bin/{env['platform']}/{lib_filename}"
             ]
         )
-        env.Depends(library, plist_file)  # Ensure Info.plist is created before the framework binary
+        env.Depends(library, plist_file)
         install_source = framework_dir
     else:  # iOS
-        # Single arm64 build
         if not env.get('arch'):
             env['arch'] = 'arm64'
         temp_framework_name = f"lib{libname}.ios.{env['target']}.{precision}.framework"
         framework_binary = f"lib{libname}.ios.{env['target']}.{precision}"
         framework_name = f"lib{libname}.ios.{env['target']}.{precision}.xcframework"
         temp_framework_dir = f"bin/{env['platform']}/{temp_framework_name}"
-        # Create Info.plist file
         plist_file = f"{temp_framework_dir}/Info.plist"
         env.Command(
             plist_file,
             [],
             lambda target, source, env: write_info_plist(target, source, env, generate_info_plist('ios', env['target'], precision))
         )
-        # Create temporary .framework in bin/ios
         temp_framework = env.Command(
             f"{temp_framework_dir}/{framework_binary}",
             temp_lib,
@@ -237,29 +228,33 @@ if env['platform'] in ['macos', 'ios']:
                 f"cp $SOURCE $TARGET"
             ]
         )
-        env.Depends(temp_framework, plist_file)  # Ensure Info.plist is created before the framework binary
-        # Create .xcframework in bin/ios
+        env.Depends(temp_framework, plist_file)
         library = env.Command(
             f"bin/{env['platform']}/{framework_name}",
             temp_framework,
             [
                 f"xcodebuild -create-xcframework -framework {temp_framework_dir} -output $TARGET",
-                f"rm -rf {temp_framework_dir}",  # Clean up temporary .framework
-                f"rm -f bin/{env['platform']}/{lib_filename}"  # Clean up temporary .dylib
+                f"rm -rf {temp_framework_dir}",
+                f"rm -f bin/{env['platform']}/{lib_filename}"
             ]
         )
         install_source = f"bin/{env['platform']}/{framework_name}"
 else:
-    # For other platforms, build a single shared library
     library = env.SharedLibrary(
         f"bin/{env['platform']}/{lib_filename}",
         source=sources
     )
     install_source = library
 
-# Install the library to test_project
-install_dir = f"{projectdir}/{libname}/bin/{env['platform']}/"
-copy = env.Install(install_dir, source=install_source)
+# Dynamically target the active project's plugin bin path securely
+plugin_name_str = config.getPluginName()
+install_dir = projectdir / plugin_name_str / "bin" / env['platform']
+
+# Ensure target installation directory exists on disk so it never fails silently
+os.makedirs(str(install_dir), exist_ok=True)
+
+# Install the library to the active Godot project path
+copy = env.Install(str(install_dir), source=install_source)
 
 # Set default targets
 default_args = [library, copy]

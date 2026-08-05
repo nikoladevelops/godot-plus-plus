@@ -26,9 +26,27 @@ SCONSTRUCT_PATH = PROJECT_ROOT / "SConstruct"
 
 
 def get_godot_project_dir() -> Path:
-    """Returns the absolute Path to the Godot project directory."""
+    """
+    Returns the absolute Path to the Godot project directory.
+    Robustly handles absolute paths, relative paths, or defaults back to test_project.
+    """
     from config_manager import config
-    return PROJECT_ROOT / config.getGodotProjectFolder()
+    project_str = config.getGodotProjectFolder()
+
+    if not project_str:
+        return PROJECT_ROOT / "test_project"
+
+    path_obj = Path(project_str)
+    if path_obj.is_absolute():
+        return path_obj
+
+    # If a relative folder name/path was saved, check if it exists inside PROJECT_ROOT first,
+    # otherwise treat it flexibly relative to PROJECT_ROOT or current working directory.
+    workspace_resolved = PROJECT_ROOT / path_obj
+    if workspace_resolved.exists():
+        return workspace_resolved
+
+    return path_obj.resolve()
 
 
 def get_plugin_dir() -> Path:
@@ -42,6 +60,7 @@ def get_gdextension_file_path() -> Path:
     from config_manager import config
     plugin_name = config.getPluginName()
     return get_plugin_dir() / f"{plugin_name}.gdextension"
+
 
 def get_selected_extension_api_path() -> Path:
     """

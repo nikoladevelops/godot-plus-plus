@@ -55,6 +55,7 @@ def display_menu():
     project_folder = config.getGodotProjectFolder()
     build_profile = config.getSelectedBuildProfile()
     active_version = get_active_path_version()
+    reloadable = config.getReloadable()
 
     print(f"Current Plugin Name: {plugin_name}")
     print(f"Current Targeted Godot Version: {godot_version}")
@@ -62,10 +63,12 @@ def display_menu():
     print(f"Selected Build Profile: {build_profile or 'NONE'}")
 
     if godot_path:
-        print(f"Active Godot Engine Path: {godot_path} ({active_version})\n")
+        print(f"Active Godot Engine Path: {godot_path} ({active_version})")
     else:
-        print("Active Godot Engine Path: NONE\n")
+        print("Active Godot Engine Path: NONE")
+    print(f"Hot Reload Status: reloadable={reloadable}")
 
+    print("\n")
     print("Choose an option:")
     for idx, (title, _) in enumerate(MENU_ITEMS, start=1):
         print(f"{idx}. {title}")
