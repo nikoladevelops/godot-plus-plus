@@ -1,264 +1,80 @@
 #!/usr/init/env python
 import os
-import sys
 
-from methods import print_error
+from tools.apple_helpers import build_apple_framework
 from tools.config_manager import config
 from tools.gdextension_file_helper import sync_gdextension_to_target_project
-from tools.paths import BUILD_PROFILES_DIR, get_plugin_dir
+from tools.paths import DOCS_SOURCE_DIR
+from tools.scons_build_helpers import (
+    find_sources,
+    get_library_filename,
+    get_target_install_dir,
+    setup_build_environment,
+    verify_godot_cpp_submodule,
+)
 
-
-# Function to recursively find .cpp files in the given directories
-def find_sources(dirs, exts):
-    """
-    Recursively searches the specified directories for .cpp files.
-
-    Args:
-        dirs (list): List of directory paths to search.
-        exts (list): List of file extensions that are acceptable and should contain C++ code.
-    Returns:
-        list: List of full paths to .cpp files found.
-    """
-    sources = []
-    for dir in dirs:
-        for root, _, files in os.walk(dir):
-            for file in files:
-                if any(file.endswith(ext) for ext in exts):
-                    sources.append(os.path.join(root, file))
-    return sources
-
-# Run synchronization right before installation setup to catch any manual edits
+# Synchronize the master .gdextension manifest to active project target
 sync_gdextension_to_target_project()
 
-
-# Configuration
+# Base Configuration Setup
 libname = config.getPluginName()
-
-
-# Set up the environment
 env = Environment(tools=["default"], PLATFORM="")
 
-# Custom configuration file
-customs = ["custom.py"]
-customs = [os.path.abspath(path) for path in customs]
-
-# Define GDExtension-specific options
+customs = [os.path.abspath("custom.py")]
 opts = Variables(customs, ARGUMENTS)
-opts.Add('source_dirs', 'List of source directories (comma-separated)', 'src') # Directory for source files
-opts.Add('source_exts', 'List of source file extensions (comma-separated)', '.cpp,.c,.cc,.cxx')
-opts.Add('include_dirs', 'List of include directories (comma-separated)', 'src') # Directory for headers
+
+# Register GDExtension Build Variables
+opts.Add('source_dirs', 'List of source directories', 'src')
+opts.Add('source_exts', 'List of source extensions', '.cpp,.c,.cc,.cxx')
+opts.Add('include_dirs', 'List of include directories', 'src')
 opts.Add('doc_output_dir', 'Directory for documentation output', 'gen')
-opts.Add('precision', 'Floating-point precision (single or double)', 'single')  # Default to single
-opts.Add('bundle_id_prefix', 'Bundle identifier prefix (reverse-DNS format)', 'com.gdextension')  # Default prefix
-opts.Add(EnumVariable(
-    'threads',
-    'Enable threads for web builds',
-    'no',  # default
-    allowed_values=('yes', 'no', 'true', 'false')
-))
+opts.Add('precision', 'Floating precision (single/double)', 'single')
+opts.Add('bundle_id_prefix', 'Bundle identifier prefix', 'com.gdextension')
+opts.Add(EnumVariable('threads', 'Enable threads for web', 'no', allowed_values=('yes', 'no', 'true', 'false')))
 
-# Build profiles can be used to decrease compile times.
-# You can either specify "disabled_classes", OR
-# explicitly specify "enabled_classes" which disables all other classes.
-
-selectedBuildProfile = config.getSelectedBuildProfile()
-if selectedBuildProfile != "none":
-    env["build_profile"] = str(BUILD_PROFILES_DIR / selectedBuildProfile)
-    print(f"Selected build profile: {selectedBuildProfile}\n")
-else:
-    print("No selected build profile\n")
-
-# Update the environment with the options
-opts.Update(env)
-
-# Generate help text for the options
+setup_build_environment(env, opts)
 Help(opts.GenerateHelpText(env))
 
-# Check for godot-cpp submodule
-if not (os.path.isdir("godot-cpp") and os.listdir("godot-cpp")):
-    print_error("""godot-cpp is not available within this folder, as Git submodules haven't been initialized.
-Run the following command to download godot-cpp:
+# Verify and Auto-Initialize godot-cpp Submodule
+verify_godot_cpp_submodule()
 
-    git submodule update --init --recursive""")
-    sys.exit(1)
-
-# Include godot-cpp SConstruct, passing all command-line arguments
+# Include godot-cpp SConstruct script
 env = SConscript("godot-cpp/SConstruct", {"env": env, "customs": customs})
 
-# Process GDExtension-specific options
-source_dirs = env['source_dirs'].split(',')   # Convert comma-separated string to list
-source_exts = env['source_exts'].split(',')   # Convert comma-separated string to list
-include_dirs = env['include_dirs'].split(',') # Convert comma-separated string to list
-doc_output_dir = env['doc_output_dir']        # Directory for documentation output
-precision = env.get('precision', 'single')     # Ensure precision defaults to single
-bundle_id_prefix = env.get('bundle_id_prefix', 'com.gdextension')  # Ensure prefix defaults to com.gdextension
+# Extract Environment Options & Source Files
+source_dirs = env['source_dirs'].split(',')
+source_exts = env['source_exts'].split(',')
+include_dirs = env['include_dirs'].split(',')
+doc_output_dir = env['doc_output_dir']
+precision = env.get('precision', 'single')
+bundle_id_prefix = env.get('bundle_id_prefix', 'com.gdextension')
 
-# Append include directories to CPPPATH
 env.Append(CPPPATH=include_dirs)
-
-# Find all .cpp files recursively in the specified source directories
 sources = find_sources(source_dirs, source_exts)
 
-# Handle documentation generation if applicable
-if env.get("target") in ["editor", "template_debug"]:
+# Bind Documentation Generation
+is_debug_target = env.get("target") == "template_debug"
+editor_target_mode = config.getEditorTargetMode()
+
+if is_debug_target or (env.get("target") == "template_release" and editor_target_mode == "release"):
     try:
         doc_output_file = os.path.join(doc_output_dir, 'doc_data.gen.cpp')
-        doc_data = env.GodotCPPDocData(doc_output_file, source=Glob("doc_classes/*.xml"))
+        doc_data = env.GodotCPPDocData(doc_output_file, source=Glob(str(DOCS_SOURCE_DIR / "*.xml")))
         sources.append(doc_data)
     except AttributeError:
-        print("Not including class reference as we're targeting a pre-4.3 baseline.")
+        print("Skipping class reference (pre-4.3 baseline target).")
 
-# Determine suffixes based on env (align with godot-cpp conventions)
-arch_suffix = f".{env['arch']}" if env['arch'] and env['arch'] != 'universal' else ''
-threads_val = str(env.get('threads', 'no')).strip().lower()
-threads_suffix = '.threads' if env['platform'] == 'web' and threads_val in ('yes', 'true') else ''
+lib_filename = get_library_filename(env, libname, precision)
 
-suffix = f".{env['platform']}.{env['target']}{arch_suffix}{threads_suffix}.{precision}"
-lib_filename = f"{env.subst('$SHLIBPREFIX')}{libname}{suffix}{env.subst('$SHLIBSUFFIX')}"
-
-# Generate Info.plist content for macOS and iOS
-def generate_info_plist(platform, target, precision):
-    framework_name = f"lib{libname}.{platform}.{target}.{precision}"
-    bundle_id = f"{bundle_id_prefix}.{libname}"
-    if platform == 'macos':
-        return f"""<?xml version="1.0" encoding="UTF-8"?>
-<!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
-<plist version="1.0">
-<dict>
-    <key>CFBundleExecutable</key>
-    <string>{framework_name}</string>
-    <key>CFBundleIdentifier</key>
-    <string>{bundle_id}</string>
-    <key>CFBundleInfoDictionaryVersion</key>
-    <string>6.0</string>
-    <key>CFBundleName</key>
-    <string>{framework_name}</string>
-    <key>CFBundlePackageType</key>
-    <string>FMWK</string>
-    <key>CFBundleShortVersionString</key>
-    <string>1.0.0</string>
-    <key>CFBundleSupportedPlatforms</key>
-    <array>
-        <string>MacOSX</string>
-    </array>
-    <key>CFBundleVersion</key>
-    <string>1.0.0</string>
-    <key>LSMinimumSystemVersion</key>
-    <string>10.12</string>
-</dict>
-</plist>"""
-    else:  # ios
-        return f"""<?xml version="1.0" encoding="UTF-8"?>
-<!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
-<plist version="1.0">
-<dict>
-    <key>CFBundleExecutable</key>
-    <string>{framework_name}</string>
-    <key>CFBundleIdentifier</key>
-    <string>{bundle_id}</string>
-    <key>CFBundleInfoDictionaryVersion</key>
-    <string>6.0</string>
-    <key>CFBundleName</key>
-    <string>{framework_name}</string>
-    <key>CFBundlePackageType</key>
-    <string>FMWK</string>
-    <key>CFBundleShortVersionString</key>
-    <string>1.0.0</string>
-    <key>CFBundleSupportedPlatforms</key>
-    <array>
-        <string>iPhoneOS</string>
-    </array>
-    <key>CFBundleVersion</key>
-    <string>1.0.0</string>
-    <key>LSMinimumSystemVersion</key>
-    <string>12.0</string>
-</dict>
-</plist>"""
-
-def write_info_plist(target, source, env, plist_content):
-    with open(target[0].abspath, 'w') as f:
-        f.write(plist_content)
-
-# Build the shared library and create frameworks
-library = None
-install_source = None
+# Library Build Targets (Delegates Apple Frameworks to helper or builds generic shared library)
 if env['platform'] in ['macos', 'ios']:
-    temp_lib = env.SharedLibrary(
-        f"bin/{env['platform']}/{lib_filename}",
-        source=sources
-    )
-    if env['platform'] == 'macos':
-        if env.get('arch') != 'universal':
-            env['arch'] = 'universal'
-        framework_name = f"lib{libname}.macos.{env['target']}.{precision}.framework"
-        framework_binary = f"lib{libname}.macos.{env['target']}.{precision}"
-        framework_dir = f"bin/{env['platform']}/{framework_name}"
-        plist_file = f"{framework_dir}/Info.plist"
-        env.Command(
-            plist_file,
-            [],
-            lambda target, source, env: write_info_plist(target, source, env, generate_info_plist('macos', env['target'], precision))
-        )
-        library = env.Command(
-            f"{framework_dir}/{framework_binary}",
-            temp_lib,
-            [
-                f"mkdir -p {framework_dir}",
-                f"cp $SOURCE $TARGET",
-                f"rm -f bin/{env['platform']}/{lib_filename}"
-            ]
-        )
-        env.Depends(library, plist_file)
-        install_source = framework_dir
-    else:  # iOS
-        if not env.get('arch'):
-            env['arch'] = 'arm64'
-        temp_framework_name = f"lib{libname}.ios.{env['target']}.{precision}.framework"
-        framework_binary = f"lib{libname}.ios.{env['target']}.{precision}"
-        framework_name = f"lib{libname}.ios.{env['target']}.{precision}.xcframework"
-        temp_framework_dir = f"bin/{env['platform']}/{temp_framework_name}"
-        plist_file = f"{temp_framework_dir}/Info.plist"
-        env.Command(
-            plist_file,
-            [],
-            lambda target, source, env: write_info_plist(target, source, env, generate_info_plist('ios', env['target'], precision))
-        )
-        temp_framework = env.Command(
-            f"{temp_framework_dir}/{framework_binary}",
-            temp_lib,
-            [
-                f"mkdir -p {temp_framework_dir}",
-                f"cp $SOURCE $TARGET"
-            ]
-        )
-        env.Depends(temp_framework, plist_file)
-        library = env.Command(
-            f"bin/{env['platform']}/{framework_name}",
-            temp_framework,
-            [
-                f"xcodebuild -create-xcframework -framework {temp_framework_dir} -output $TARGET",
-                f"rm -rf {temp_framework_dir}",
-                f"rm -f bin/{env['platform']}/{lib_filename}"
-            ]
-        )
-        install_source = f"bin/{env['platform']}/{framework_name}"
+    library, install_source = build_apple_framework(env, libname, lib_filename, precision, bundle_id_prefix, sources)
 else:
-    library = env.SharedLibrary(
-        f"bin/{env['platform']}/{lib_filename}",
-        source=sources
-    )
+    library = env.SharedLibrary(f"bin/{env['platform']}/{lib_filename}", source=sources)
     install_source = library
 
-# Dynamically target the active project's plugin bin path securely
-plugin_name_str = config.getPluginName()
-install_dir = get_plugin_dir() / "bin" / env['platform']
-
-# Ensure target installation directory exists on disk so it never fails silently
-os.makedirs(str(install_dir), exist_ok=True)
-
-# Install the library to the active Godot project path
+# Final Target Installation
+install_dir = get_target_install_dir(env)
 copy = env.Install(str(install_dir), source=install_source)
 
-# Set default targets
-default_args = [library, copy]
-Default(*default_args)
+Default([library, copy])

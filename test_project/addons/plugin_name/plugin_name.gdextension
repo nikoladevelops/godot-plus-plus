@@ -61,4 +61,4 @@ ios.release = {
 }
 
 [icons]
-ItemData = "res://plugin_name/icons/ItemData.svg"
+ItemData = "./icons/ItemData.svg"

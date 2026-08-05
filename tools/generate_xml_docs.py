@@ -3,11 +3,10 @@ import sys
 from pathlib import Path
 
 from config_manager import config
-from paths import PROJECT_ROOT, get_godot_project_dir
+from paths import DOCS_SOURCE_DIR, PROJECT_ROOT, get_godot_project_dir
 from scons_helpers import clear_screen
 
 TOOL_HEADER = "Tool For Generating XML Editor Documentation By @realNikich"
-DOCS_OUTPUT_DIR = PROJECT_ROOT / "doc_classes"
 GODOT_DOCS_URL = "https://docs.godotengine.org/en/stable/tutorials/scripting/cpp/gdextension_docs_system.html"
 
 
@@ -41,7 +40,7 @@ def print_documentation_guide() -> None:
     print(f"\n{'=' * 80}")
     print(f"{'GODOT XML DOCUMENTATION QUICK GUIDE':^80}")
     print(f"{'=' * 80}")
-    print(f"Once generated, your XML files are located in: '{DOCS_OUTPUT_DIR}'")
+    print(f"Once generated, your XML files are located in: '{DOCS_SOURCE_DIR}'")
     print("You can style descriptions using BBCode-style tags inside the text fields:\n")
 
     print("1. CROSS-REFERENCING CLASSES & MEMBERS:")
@@ -134,7 +133,7 @@ def main() -> None:
     display_warning()
 
     if generate_docs(godot_executable, project_dir):
-        print(f"\nDone! Check the '{DOCS_OUTPUT_DIR}' folder and customize your XML files.")
+        print(f"\nDone! Check the '{DOCS_SOURCE_DIR}' folder and customize your XML files.")
         print_documentation_guide()
         print(f"Official Documentation Reference: {GODOT_DOCS_URL}")
         print("\nAfter writing your custom documentation inside the files, you need to recompile your project!")

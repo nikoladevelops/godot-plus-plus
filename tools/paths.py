@@ -24,6 +24,9 @@ BUILD_PROFILES_DIR = PROJECT_ROOT / "build_profiles"
 # This is where the SConstruct file for scons is
 SCONSTRUCT_PATH = PROJECT_ROOT / "SConstruct"
 
+# This is where your custom class reference xml files are located for doc tool generation
+DOCS_SOURCE_DIR = PROJECT_ROOT / "doc_classes"
+
 
 def get_godot_project_dir() -> Path:
     """
