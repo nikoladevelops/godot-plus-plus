@@ -4,6 +4,7 @@ import sys
 
 from methods import print_error
 from tools.config_manager import config
+from tools.gdextension_file_helper import sync_gdextension_to_target_project
 from tools.paths import BUILD_PROFILES_DIR, get_godot_project_dir
 
 
@@ -26,11 +27,16 @@ def find_sources(dirs, exts):
                     sources.append(os.path.join(root, file))
     return sources
 
+# Run synchronization right before installation setup to catch any manual edits
+sync_gdextension_to_target_project()
+
+
 # Configuration
-libname = "plugin_name"
+libname = config.getPluginName()
 
 # Dynamically resolve active project directory
 projectdir = get_godot_project_dir()
+
 
 # Set up the environment
 env = Environment(tools=["default"], PLATFORM="")

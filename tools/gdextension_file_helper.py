@@ -1,8 +1,45 @@
+import filecmp
 import re
 from pathlib import Path
-from typing import Dict, List, Optional
+from typing import Optional
 
-from paths import get_gdextension_file_path
+from paths import get_gdextension_file_path, get_plugin_dir
+
+
+def sync_gdextension_to_target_project() -> None:
+    """
+    Copies the master source .gdextension file from the template workspace root
+    into the active target Godot project's plugin folder if they differ or if it's missing.
+    Also removes any stale Godot import cache (.import) files to force a clean re-import.
+    """
+    source_path = get_gdextension_file_path()
+    if not source_path.exists():
+        return
+
+    plugin_dir = get_plugin_dir()
+    plugin_dir.mkdir(parents=True, exist_ok=True)
+
+    dest_path = plugin_dir / source_path.name
+    import_file_path = Path(f"{dest_path}.import")
+
+    needs_copy = False
+    if not dest_path.exists():
+        needs_copy = True
+    else:
+        if not filecmp.cmp(source_path, dest_path, shallow=False):
+            needs_copy = True
+
+    if needs_copy:
+        plugin_dir.mkdir(parents=True, exist_ok=True)
+        dest_path.write_text(source_path.read_text(encoding="utf-8"), encoding="utf-8")
+        print(f"Synced .gdextension manifest to target project: {dest_path}")
+
+        if import_file_path.exists():
+            try:
+                import_file_path.unlink()
+                print(f"Removed stale import cache: {import_file_path}")
+            except OSError as e:
+                print(f"Warning: Could not remove import file: {e}")
 
 
 def set_editor_target_mode(mode: str, file_path: Optional[Path] = None) -> None:
@@ -26,34 +63,30 @@ def set_editor_target_mode(mode: str, file_path: Optional[Path] = None) -> None:
     for line in lines:
         stripped = line.strip()
 
-        # Track sections
         if stripped.startswith("[") and stripped.endswith("]"):
             current_section = stripped.lower()
             in_debug_block = False
             updated_lines.append(line)
             continue
 
-        # Only process inside [libraries] and [dependencies]
         if current_section in ["[libraries]", "[dependencies]"]:
-            # Check for starting key declarations like `ios.debug = {` or `windows.debug.x86_64 = ...`
             if "=" in line and not stripped.startswith(";"):
                 key_part = line.split("=", 1)[0].strip()
                 in_debug_block = ".debug" in key_part
 
-            # If we are inside a .debug key assignment or inside a multi-line .debug block
             if in_debug_block:
                 if mode == "release":
                     line = line.replace("template_debug", "template_release")
                 else:
                     line = line.replace("template_release", "template_debug")
 
-            # Reset block state when multi-line dictionary closes
             if "}" in line:
                 in_debug_block = False
 
         updated_lines.append(line)
 
     target_path.write_text("\n".join(updated_lines) + "\n", encoding="utf-8")
+    sync_gdextension_to_target_project()
 
 
 def set_reloadable(reloadable: bool, file_path: Optional[Path] = None) -> None:
@@ -69,7 +102,6 @@ def set_reloadable(reloadable: bool, file_path: Optional[Path] = None) -> None:
     content = target_path.read_text(encoding="utf-8")
     value_str = "true" if reloadable else "false"
 
-    # Matches reloadable = true or reloadable = false (case-insensitive search)
     pattern = r'(reloadable\s*=\s*)(true|false|True|False)'
 
     if re.search(pattern, content):
@@ -85,6 +117,8 @@ def set_reloadable(reloadable: bool, file_path: Optional[Path] = None) -> None:
             updated_content = f'[configuration]\nreloadable = {value_str}\n\n' + content
 
     target_path.write_text(updated_content, encoding="utf-8")
+    sync_gdextension_to_target_project()
+
 
 def get_target_gdextension_path(custom_path: Optional[Path] = None) -> Path:
     """Utility to resolve custom_path or default to get_gdextension_file_path()."""
@@ -119,10 +153,11 @@ def set_compatibility_minimum(
             updated_content = f'[configuration]\ncompatibility_minimum = "{min_version}"\n\n' + content
 
     target_path.write_text(updated_content, encoding="utf-8")
+    sync_gdextension_to_target_project()
 
 
 def update_section_in_gdextension(
-    section_name: str, key_value_pairs: Dict[str, str], file_path: Optional[Path] = None
+    section_name: str, key_value_pairs: dict[str, str], file_path: Optional[Path] = None
 ) -> None:
     """
     Safely replaces or appends a target section (e.g., [icons]) inside a .gdextension file.
@@ -134,7 +169,7 @@ def update_section_in_gdextension(
 
     lines = target_path.read_text(encoding="utf-8").splitlines()
 
-    new_lines: List[str] = []
+    new_lines: list[str] = []
     inside_target_section = False
     target_header = f"[{section_name}]"
 
@@ -159,10 +194,11 @@ def update_section_in_gdextension(
 
     final_content = clean_content + new_section_block
     target_path.write_text(final_content, encoding="utf-8")
+    sync_gdextension_to_target_project()
 
 
 def update_icons_in_gdextension(
-    icon_mappings: Dict[str, str], file_path: Optional[Path] = None
+    icon_mappings: dict[str, str], file_path: Optional[Path] = None
 ) -> None:
     """
     Helper shortcut specifically for updating the [icons] section in a .gdextension file.

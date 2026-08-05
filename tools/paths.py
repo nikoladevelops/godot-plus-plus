@@ -27,8 +27,8 @@ SCONSTRUCT_PATH = PROJECT_ROOT / "SConstruct"
 
 def get_godot_project_dir() -> Path:
     """
-    Returns the absolute Path to the Godot project directory.
-    Robustly handles absolute paths, relative paths, or defaults back to test_project.
+    Returns the absolute Path to the active target Godot project directory
+    (supports both absolute paths for external projects and relative workspace paths).
     """
     from config_manager import config
     project_str = config.getGodotProjectFolder()
@@ -40,8 +40,6 @@ def get_godot_project_dir() -> Path:
     if path_obj.is_absolute():
         return path_obj
 
-    # If a relative folder name/path was saved, check if it exists inside PROJECT_ROOT first,
-    # otherwise treat it flexibly relative to PROJECT_ROOT or current working directory.
     workspace_resolved = PROJECT_ROOT / path_obj
     if workspace_resolved.exists():
         return workspace_resolved
@@ -50,16 +48,16 @@ def get_godot_project_dir() -> Path:
 
 
 def get_plugin_dir() -> Path:
-    """Returns the absolute Path to the plugin folder inside the Godot project."""
+    """Returns the absolute Path to the plugin folder inside the selected active Godot project."""
     from config_manager import config
     return get_godot_project_dir() / config.getPluginName()
 
 
 def get_gdextension_file_path() -> Path:
-    """Returns the absolute Path to the target .gdextension manifest file."""
+    """Returns the absolute Path to the master source .gdextension manifest file in the workspace root template."""
     from config_manager import config
     plugin_name = config.getPluginName()
-    return get_plugin_dir() / f"{plugin_name}.gdextension"
+    return PROJECT_ROOT / f"{plugin_name}.gdextension"
 
 
 def get_selected_extension_api_path() -> Path:
@@ -72,5 +70,4 @@ def get_selected_extension_api_path() -> Path:
     if rel_path_str:
         return PROJECT_ROOT / rel_path_str
 
-    # Fallback default if no path is stored in config yet
     return GDEXTENSION_APIS_PATH / "extension_api.json"
