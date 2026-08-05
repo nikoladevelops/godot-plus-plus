@@ -1,3 +1,0 @@
-plugin_name
-4.5
-GODOT_ENGINE_PATH_GOES_HERE
