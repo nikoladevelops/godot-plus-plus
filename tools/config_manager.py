@@ -18,6 +18,7 @@ class _PluginConfig:
             "extensionApiPath": "godot-cpp/gdextension/extension_api.json",
             "reloadable": True,
             "editorTargetMode": "debug",
+            "debugSymbols": "no"
         }
 
         if self.config_path.exists():
@@ -153,5 +154,12 @@ class _PluginConfig:
 
         self._save_config()
 
+    def getDebugSymbols(self) -> str:
+            self.reload()
+            return self.data.get("debugSymbols", "no")
+
+    def setDebugSymbols(self, mode: str) -> None:
+        self.data["debugSymbols"] = mode.strip().lower()
+        self._save_config()
 
 config = _PluginConfig()

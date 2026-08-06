@@ -47,7 +47,7 @@ void ItemData::spawn_stuff() {
 
 	// Because my_node is a pointer to a Node, you can use the arrow operator (->) to access its methods and properties
 	my_node->set_name(name); // This is how you call methods on the node, similar to "my_node.name = name" in GDScript
-	
+
 	// WARNING: this won't work on our Resource class, we need to inherit from Node instead and place the node in the scene tree, or we will get crashes, but it's good knowledge
 	//get_local_scene()->add_child(my_node); // This is how you add a node to the current scene tree, similar to "add_child(node)" in GDScript
 

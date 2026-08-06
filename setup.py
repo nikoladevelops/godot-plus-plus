@@ -22,6 +22,7 @@ MENU_ITEMS = [
     ("Toggle Editor Build Target", "toggle_editor_target.py"),
     ("Select Godot Engine Executable Path", "select_godot_path.py"),
     ("Clean Compiled SCons Build Artifacts", "clean_build.py"),
+    ("Toggle Debug Symbols (Allows Attaching Debugger)", "toggle_debug_symbols.py"),
     ("Tutorials And Help With Godot C++", "tutorials.py"),
 ]
 

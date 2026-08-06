@@ -14,13 +14,13 @@ def clear_screen() -> None:
     cmd = "cls" if os.name == "nt" else "clear"
     subprocess.run([cmd], check=False)
 
-
 def run_scons_build(target: BuildTarget) -> None:
     """
     Executes SCons build targeting a specific build profile (template_debug or template_release)
     and streams output in real-time.
     """
     godot_version = config.getGodotVersion()
+    debug_symbols = config.getDebugSymbols()
 
     # Only apply LTO for template_release builds.
     # Debug builds MUST use lto=none for fast compilation and debugging.
@@ -39,12 +39,14 @@ def run_scons_build(target: BuildTarget) -> None:
         f"target={target}",
         "compiledb=yes",
         f"api_version={godot_version}",
-        f"lto={lto_mode}"
+        f"lto={lto_mode}",
+        f"debug_symbols={debug_symbols}"
     ]
 
     mode_label = "Debug" if target == "template_debug" else "Release"
 
     print(f"Starting {mode_label} compilation targeting Godot API version {godot_version}...")
+    print(f"Debug Symbols: {debug_symbols.upper()}")
     if target == "template_debug" and config.getLtoMode() != "none":
         print("Note: LTO is automatically disabled for Debug builds to ensure fast compilation.")
     else:
@@ -83,7 +85,7 @@ def run_scons_build(target: BuildTarget) -> None:
         if process.returncode == 0:
             print("\n" + "=" * 50)
             print(f"Compilation finished successfully ({mode_label} Build).")
-            print(f"Target API: Godot {godot_version} | LTO: {lto_mode}")
+            print(f"Target API: Godot {godot_version} | LTO: {lto_mode} | Debug Symbols: {debug_symbols}")
             print(f"A {mode_label.lower()} build was added to the bin/ folder.")
             print("The compile_commands.json file was also updated for IDE IntelliSense support.")
         else:
@@ -97,7 +99,6 @@ def run_scons_build(target: BuildTarget) -> None:
         print(f"An unexpected execution error occurred: {e}")
 
     input("\nPress Enter to continue...")
-
 
 def run_scons_clean() -> None:
     """
