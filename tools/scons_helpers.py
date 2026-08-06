@@ -97,3 +97,68 @@ def run_scons_build(target: BuildTarget) -> None:
         print(f"An unexpected execution error occurred: {e}")
 
     input("\nPress Enter to continue...")
+
+
+def run_scons_clean() -> None:
+    """
+    Executes SCons clean command (scons -c) to remove build artifacts and streams output in real-time.
+    """
+    godot_version = config.getGodotVersion()
+
+    if not godot_version:
+        print("Error: No Godot version set in config.json.")
+        input("\nPress Enter to continue...")
+        sys.exit(1)
+
+    scons_args = [
+        "scons",
+        "-c",
+        f"api_version={godot_version}"
+    ]
+
+    print(f"Starting SCons clean process (Removing build artifacts for Godot API {godot_version})...")
+    print(f"Executing: {' '.join(scons_args)}\n" + "-" * 50 + "\n")
+
+    try:
+        process = subprocess.Popen(
+            scons_args,
+            stdout=subprocess.PIPE,
+            stderr=subprocess.PIPE,
+            text=True,
+            cwd=str(PROJECT_ROOT)
+        )
+
+        stdout_lines = []
+        stderr_lines = []
+
+        if process.stdout is not None:
+            while True:
+                output = process.stdout.readline()
+                if output:
+                    print(output, end="")
+                    stdout_lines.append(output)
+                elif process.poll() is not None:
+                    break
+
+        remaining_out, remaining_err = process.communicate()
+        if remaining_out:
+            print(remaining_out, end="")
+            stdout_lines.append(remaining_out)
+        if remaining_err:
+            stderr_lines.append(remaining_err)
+
+        if process.returncode == 0:
+            print("\n" + "=" * 50)
+            print("SCons clean finished successfully.")
+            print("All built targets and generated artifacts mapped by SCons have been cleared.")
+        else:
+            print("\n" + "=" * 50)
+            print("SCons clean FAILED:")
+            print("".join(stderr_lines).strip() or "Unknown error occurred.")
+
+    except FileNotFoundError:
+        print("Error: 'scons' command not found. Make sure SCons is installed and available in your PATH.")
+    except (subprocess.SubprocessError, OSError) as e:
+        print(f"An unexpected execution error occurred: {e}")
+
+    input("\nPress Enter to continue...")

@@ -21,6 +21,7 @@ MENU_ITEMS = [
     ("Select Godot Project Folder", "select_godot_project.py"),
     ("Toggle Editor Build Target", "toggle_editor_target.py"),
     ("Select Godot Engine Executable Path", "select_godot_path.py"),
+    ("Clean Compiled SCons Build Artifacts", "clean_build.py"),
     ("Tutorials And Help With Godot C++", "tutorials.py"),
 ]
 
