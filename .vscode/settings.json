@@ -72,6 +72,7 @@
     "gen": true,
     "bin":true,
     "test_project":true,
+    "releases":true,
     "tools":true,
     ".clang-format": true,
     ".editorconfig": true,
@@ -87,7 +88,7 @@
     "LICENSE":true,
     "README.md":true,
     "SConstruct":true,
-    ".gitignore":true,
+    //".gitignore":true,
     ".github":true,
     "godot-cpp":true,
     "setup.py":false

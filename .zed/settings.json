@@ -70,6 +70,7 @@
     "gen",
     "bin",
     "test_project",
+    "releases",
     //"tools",
     ".clang-format",
     ".editorconfig",
@@ -85,7 +86,7 @@
     "LICENSE",
     "README.md",
     //"SConstruct",
-    ".gitignore",
+    //".gitignore",
     //".github",
     "godot-cpp"
   ],
