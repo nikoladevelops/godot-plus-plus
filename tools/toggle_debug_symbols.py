@@ -1,19 +1,7 @@
-import os
 import sys
 
-# Ensure tools directory is in sys.path for direct script execution
-SCRIPT_DIR = os.path.dirname(os.path.abspath(__file__))
-if SCRIPT_DIR not in sys.path:
-    sys.path.append(SCRIPT_DIR)
-
 from config_manager import config
-
-
-def clear_screen() -> None:
-    """Clear the terminal screen cross-platform using subprocess."""
-    cmd = "cls" if os.name == "nt" else "clear"
-    os.system(cmd)
-
+from scons_helpers import clear_screen
 
 if __name__ == "__main__":
     clear_screen()
