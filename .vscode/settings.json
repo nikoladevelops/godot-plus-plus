@@ -86,7 +86,7 @@
     "3d_build_profile.json":true,
     "build_profile.json":true,
     "LICENSE":true,
-    "README.md":true,
+    //"README.md":true,
     "SConstruct":true,
     //".gitignore":true,
     ".github":true,
