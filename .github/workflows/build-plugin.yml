@@ -11,15 +11,6 @@ on:
           - debug
           - full_plugin_compilation
         default: debug
-      precision:
-        description: "Select float precision (single, double, or both)"
-        required: true
-        type: choice
-        options:
-          - single
-          - double
-          - both
-        default: single
       lto_linux:
         description: "LTO mode for Linux builds"
         required: true
@@ -107,7 +98,6 @@ jobs:
     outputs:
       plugin_name: ${{ steps.get-name.outputs.plugin_name }}
       target_types: ${{ steps.set-matrix.outputs.target_types }}
-      float_precisions: ${{ steps.set-matrix.outputs.float_precisions }}
     steps:
       - name: Checkout
         uses: actions/checkout@v4
@@ -126,13 +116,7 @@ jobs:
           else
             TARGET_TYPES='["template_debug"]'
           fi
-          if [ "${{ github.event.inputs.precision }}" = "both" ]; then
-            FLOAT_PRECISIONS='["single", "double"]'
-          else
-            FLOAT_PRECISIONS='["${{ github.event.inputs.precision }}"]'
-          fi
           echo "target_types=$TARGET_TYPES" >> $GITHUB_OUTPUT
-          echo "float_precisions=$FLOAT_PRECISIONS" >> $GITHUB_OUTPUT
 
   clear-cache:
     runs-on: ubuntu-22.04
@@ -174,7 +158,6 @@ jobs:
             { platform: web, arch: wasm32, os: ubuntu-22.04, threads: "yes", lto_input: "${{ github.event.inputs.lto_web_threads }}" }
           ]
         target-type: ${{ fromJson(needs.init-config.outputs.target_types) }}
-        float-precision: ${{ fromJson(needs.init-config.outputs.float_precisions) }}
 
     env:
       PLUGIN_NAME: ${{ needs.init-config.outputs.plugin_name }}
@@ -191,7 +174,7 @@ jobs:
         id: set-build-name
         shell: bash
         run: |
-          NAME="${{ env.PLUGIN_NAME }}.${{ matrix.target.platform }}.${{ matrix.target-type }}.${{ matrix.target.arch }}.${{ matrix.float-precision }}${{ (matrix.target.platform == 'web' && matrix.target.threads == 'yes') && '.threads' || '' }}"
+          NAME="${{ env.PLUGIN_NAME }}.${{ matrix.target.platform }}.${{ matrix.target-type }}.${{ matrix.target.arch }}.single${{ (matrix.target.platform == 'web' && matrix.target.threads == 'yes') && '.threads' || '' }}"
           echo "build_name=$NAME" >> $GITHUB_OUTPUT
           echo "cache_name=${NAME//./_}_${{ matrix.target.lto_input }}" >> $GITHUB_OUTPUT
 
@@ -234,7 +217,7 @@ jobs:
           scons target=${{ matrix.target-type }} \
                 platform=${{ matrix.target.platform }} \
                 arch=${{ matrix.target.arch }} \
-                precision=${{ matrix.float-precision }} \
+                precision=single \
                 $THREADS_FLAG \
                 $LTO_FLAG
 
