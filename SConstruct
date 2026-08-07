@@ -75,8 +75,11 @@ else:
     library = env.SharedLibrary(f"bin/{env['platform']}/{lib_filename}", source=sources)
     install_source = library
 
-# Final Target Installation
-install_dir = get_target_install_dir(env)
-copy = env.Install(str(install_dir), source=install_source)
-
-Default([library, copy])
+# Final Target Installation (Skipped on CI runners since we package from root bin/)
+if not os.environ.get("CI") and not os.environ.get("SKIP_SYNC"):
+    install_dir = get_target_install_dir(env)
+    copy = env.Install(str(install_dir), source=install_source)
+    Default([library, copy])
+else:
+    print("Skipping target project installation (CI/Runner environment detected).")
+    Default([library])
