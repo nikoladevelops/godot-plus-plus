@@ -1,4 +1,141 @@
-build:
+name: Build GDExtension Cross Platform Plugin
+
+on:
+  workflow_dispatch:
+    inputs:
+      build_type:
+        description: "Select build type (debug or full_plugin_compilation)"
+        required: true
+        type: choice
+        options:
+          - debug
+          - full_plugin_compilation
+        default: debug
+      lto_linux:
+        description: "LTO mode for Linux builds"
+        required: true
+        type: choice
+        options:
+          - none
+          - auto
+          - full
+          - thin
+        default: auto
+      lto_windows:
+        description: "LTO mode for Windows builds"
+        required: true
+        type: choice
+        options:
+          - none
+          - auto
+          - full
+          - thin
+        default: auto
+      lto_macos:
+        description: "LTO mode for macOS builds"
+        required: true
+        type: choice
+        options:
+          - none
+          - auto
+          - full
+          - thin
+        default: auto
+      lto_android:
+        description: "LTO mode for Android builds"
+        required: true
+        type: choice
+        options:
+          - none
+          - auto
+          - full
+          - thin
+        default: auto
+      lto_ios:
+        description: "LTO mode for iOS builds"
+        required: true
+        type: choice
+        options:
+          - none
+          - auto
+          - full
+          - thin
+        default: auto
+      lto_web:
+        description: "LTO mode for standard Web (non-threaded) builds"
+        required: true
+        type: choice
+        options:
+          - none
+          - auto
+          - full
+          - thin
+        default: auto
+      lto_web_threads:
+        description: "WARNING: Must stay 'none'! LTO is broken/unsupported for threaded web builds."
+        required: true
+        type: choice
+        options:
+          - none
+          - auto
+          - full
+          - thin
+        default: none
+      use_cache:
+        description: "Use Cache: Speed up compilation using SCons caching."
+        required: false
+        type: boolean
+        default: true
+      clear_all_cache:
+        description: "Clear All Cache: Clear all GitHub Actions caches before building."
+        required: false
+        type: boolean
+        default: false
+
+jobs:
+  init-config:
+    runs-on: ubuntu-22.04
+    outputs:
+      plugin_name: ${{ steps.get-name.outputs.plugin_name }}
+      target_types: ${{ steps.set-matrix.outputs.target_types }}
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Read plugin name from config.json
+        id: get-name
+        run: |
+          PLUGIN_NAME=$(python3 -c "from tools.config_manager import config; print(config.getPluginName())")
+          echo "plugin_name=$PLUGIN_NAME" >> $GITHUB_OUTPUT
+
+      - name: Set matrix values
+        id: set-matrix
+        run: |
+          if [ "${{ github.event.inputs.build_type }}" = "full_plugin_compilation" ]; then
+            TARGET_TYPES='["template_debug", "template_release"]'
+          else
+            TARGET_TYPES='["template_debug"]'
+          fi
+          echo "target_types=$TARGET_TYPES" >> $GITHUB_OUTPUT
+
+  clear-cache:
+    runs-on: ubuntu-22.04
+    needs: init-config
+    permissions:
+      actions: write
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+      - name: Clear all caches
+        if: ${{ github.event.inputs.clear_all_cache == 'true' }}
+        run: |
+          echo "About to clear all caches"
+          gh cache delete --all --succeed-on-no-caches
+          echo "Clear completed"
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+
+  build:
     needs: [init-config, clear-cache]
     strategy:
       fail-fast: false
@@ -70,6 +207,31 @@ build:
           scons-cache: ${{ github.workspace }}/.scons-cache/${{ steps.set-build-name.outputs.cache_name }}
           cache-name: ${{ steps.set-build-name.outputs.cache_name }}
 
+      - name: Inspect Active Compiler Toolchain
+        shell: bash
+        run: |
+          echo "=================================================="
+          echo "Platform: ${{ matrix.target.platform }}"
+          echo "Architecture: ${{ matrix.target.arch }}"
+          echo "Operating System Runner: ${{ matrix.target.os }}"
+          if [ "${{ matrix.target.platform }}" = "windows" ]; then
+            echo "Compiler Info:"
+            cl.exe 2>&1 || true
+            which cl.exe || true
+          elif [ "${{ matrix.target.platform }}" = "linux" ] || [ "${{ matrix.target.platform }}" = "android" ]; then
+            echo "GCC Version:"
+            gcc --version || true
+            echo "G++ Version:"
+            g++ --version || true
+          elif [ "${{ matrix.target.platform }}" = "macos" ] || [ "${{ matrix.target.platform }}" = "ios" ]; then
+            echo "Clang Version:"
+            clang --version || true
+          elif [ "${{ matrix.target.platform }}" = "web" ]; then
+            echo "Emscripten Version:"
+            emcc --version || true
+          fi
+          echo "=================================================="
+
       - name: Build GDExtension (Windows MSVC)
         if: ${{ matrix.target.platform == 'windows' }}
         shell: pwsh
@@ -121,4 +283,57 @@ build:
         with:
           name: ${{ steps.set-build-name.outputs.build_name }}
           path: ${{ github.workspace }}/bin
+          retention-days: 1
+
+  merge:
+    runs-on: ubuntu-22.04
+    needs: [init-config, build]
+    env:
+      PLUGIN_NAME: ${{ needs.init-config.outputs.plugin_name }}
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+        with:
+          submodules: true
+
+      - name: Download all artifacts
+        uses: actions/download-artifact@v4
+        with:
+          path: artifacts
+
+      - name: Organize release package structure
+        run: |
+          STAGING_DIR="addons/${{ env.PLUGIN_NAME }}"
+          mkdir -p "$STAGING_DIR/bin"
+
+          for platform_dir in artifacts/*; do
+            [ -d "$platform_dir" ] || continue
+            for p in $(find "$platform_dir" -mindepth 1 -maxdepth 1 -type d); do
+              platform_name=$(basename "$p")
+              mkdir -p "$STAGING_DIR/bin/$platform_name"
+              cp -R "$p/"* "$STAGING_DIR/bin/$platform_name/" || true
+            done
+          done
+
+          if [ -d "icons" ]; then
+            cp -R "icons" "$STAGING_DIR/icons"
+          fi
+
+          if [ -f "${{ env.PLUGIN_NAME }}.gdextension" ]; then
+            cp "${{ env.PLUGIN_NAME }}.gdextension" "$STAGING_DIR/${{ env.PLUGIN_NAME }}.gdextension"
+          fi
+
+          if [ -f "README.md" ]; then
+            cp "README.md" "$STAGING_DIR/README.md"
+          fi
+
+      - name: Create zip archive
+        run: |
+          zip -r "${{ env.PLUGIN_NAME }}.zip" addons
+
+      - name: Upload final artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: "finished_unzip_me"
+          path: "${{ env.PLUGIN_NAME }}.zip"
           retention-days: 1
