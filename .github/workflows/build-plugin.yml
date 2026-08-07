@@ -201,6 +201,31 @@ jobs:
           scons-cache: ${{ github.workspace }}/.scons-cache/${{ steps.set-build-name.outputs.cache_name }}
           cache-name: ${{ steps.set-build-name.outputs.cache_name }}
 
+      - name: Inspect Active Compiler Toolchain
+        shell: bash
+        run: |
+          echo "=================================================="
+          echo "Platform: ${{ matrix.target.platform }}"
+          echo "Architecture: ${{ matrix.target.arch }}"
+          echo "Operating System Runner: ${{ matrix.target.os }}"
+          if [ "${{ matrix.target.platform }}" = "windows" ]; then
+            echo "Compiler Info:"
+            cl.exe 2>&1 || true
+            which cl.exe || true
+          elif [ "${{ matrix.target.platform }}" = "linux" ] || [ "${{ matrix.target.platform }}" = "android" ]; then
+            echo "GCC Version:"
+            gcc --version || true
+            echo "G++ Version:"
+            g++ --version || true
+          elif [ "${{ matrix.target.platform }}" = "macos" ] || [ "${{ matrix.target.platform }}" = "ios" ]; then
+            echo "Clang Version:"
+            clang --version || true
+          elif [ "${{ matrix.target.platform }}" = "web" ]; then
+            echo "Emscripten Version:"
+            emcc --version || true
+          fi
+          echo "=================================================="
+
       - name: Build GDExtension
         shell: bash
         run: |
