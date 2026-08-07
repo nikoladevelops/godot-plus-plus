@@ -86,8 +86,8 @@ def build_apple_framework(env, libname: str, lib_filename: str, precision: str, 
         env.Command(
             plist_file,
             [],
-            lambda t, s, e: write_info_plist(
-                t, s, e, generate_info_plist(libname, 'macos', target, precision, bundle_id_prefix)
+            lambda target, source, env: write_info_plist(
+                target, source, env, generate_info_plist(libname, 'macos', target, precision, bundle_id_prefix)
             )
         )
         library = env.Command(
@@ -114,8 +114,8 @@ def build_apple_framework(env, libname: str, lib_filename: str, precision: str, 
         env.Command(
             plist_file,
             [],
-            lambda t, s, e: write_info_plist(
-                t, s, e, generate_info_plist(libname, 'ios', target, precision, bundle_id_prefix)
+            lambda target, source, env: write_info_plist(
+                target, source, env, generate_info_plist(libname, 'ios', target, precision, bundle_id_prefix)
             )
         )
         temp_framework = env.Command(
