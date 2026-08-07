@@ -170,6 +170,13 @@ jobs:
         with:
           submodules: true
 
+      # Initialize MSVC environment variables specifically for Windows builds
+      - name: Setup MSVC Environment
+        if: ${{ matrix.target.platform == 'windows' }}
+        uses: ilammy/msvc-dev-cmd@v1
+        with:
+          arch: ${{ matrix.target.arch == 'x86_32' && 'x86' || (matrix.target.arch == 'arm64' && 'arm64' || 'x64') }}
+
       - name: Set build name
         id: set-build-name
         shell: bash
