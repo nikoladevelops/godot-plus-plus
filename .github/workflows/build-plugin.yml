@@ -299,14 +299,13 @@ jobs:
             cp "README.md" "$STAGING_DIR/README.md"
           fi
 
-      - name: Create flat zip archive
+      - name: Create zip archive
         run: |
-          cd addons
-          zip -r "../${{ env.PLUGIN_NAME }}.zip" "${{ env.PLUGIN_NAME }}"
+          zip -r "${{ env.PLUGIN_NAME }}.zip" addons
 
       - name: Upload final artifact
         uses: actions/upload-artifact@v4
         with:
-          name: "${{ env.PLUGIN_NAME }}"
+          name: "finished_unzip_me"
           path: "${{ env.PLUGIN_NAME }}.zip"
           retention-days: 1
