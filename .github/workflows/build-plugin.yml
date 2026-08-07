@@ -168,7 +168,7 @@ jobs:
 
     env:
       PLUGIN_NAME: ${{ needs.init-config.outputs.plugin_name }}
-      GODOT_PROJECT_FOLDER: ""
+      CI: "true"
 
     runs-on: ${{ matrix.target.os }}
     steps:

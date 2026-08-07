@@ -12,8 +12,11 @@ from tools.scons_build_helpers import (
     verify_godot_cpp_submodule,
 )
 
-# Synchronize the master .gdextension manifest to active project target
-sync_gdextension_to_target_project()
+# Synchronize the master .gdextension manifest to active project target (skipped on CI runners)
+if not os.environ.get("CI") and not os.environ.get("SKIP_SYNC"):
+    sync_gdextension_to_target_project()
+else:
+    print("Skipping target project synchronization (CI/Runner environment detected).")
 
 # Base Configuration Setup
 libname = config.getPluginName()
