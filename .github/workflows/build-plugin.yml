@@ -1,12 +1,10 @@
 name: Build GDExtension Cross Platform Plugin
+
 on:
   workflow_dispatch:
     inputs:
       build_type:
-        description: |
-          Select build type:
-          - debug: Compiles debug builds that are loaded by the Godot editor, only used for development and testing. By using this option you can check whether your plugin works correctly for all operating systems and architectures.
-          - full_plugin_compilation: Compiles debug builds as well as release builds that are the final builds. Enables developers to use your plugin both in the editor and also in their final exported game.
+        description: "Select build type (debug or full_plugin_compilation)"
         required: true
         type: choice
         options:
@@ -14,12 +12,7 @@ on:
           - full_plugin_compilation
         default: debug
       precision:
-        description: |
-          Select float precision for floating-point calculations in the GDExtension:
-          - single: Uses 32-bit floats (faster, less memory, recommended for compatibility with standard Godot Engine releases).
-          - double: Uses 64-bit floats (higher precision, more memory, only compatible with Godot Engine compiled with float=64). Also you need to edit the .gdextension file to point to the double precision builds.
-          - both: Builds both single and double precision versions (use if targeting both standard and custom Godot builds).
-          Note: Most Godot Engine releases use single precision (float=32). Choose 'single' unless you have a custom double-precision Godot build.
+        description: "Select float precision (single, double, or both)"
         required: true
         type: choice
         options:
@@ -27,27 +20,73 @@ on:
           - double
           - both
         default: single
-      lto:
-        description: |
-          Select LTO (Link-Time Optimization) for release builds only:
-          - none: No optimization.
-          - auto: Optimize for smaller, faster binaries by selecting the best LTO mode for each platform (recommended, may increase build time/memory usage).
-          Note: Ignored for debug builds, as LTO is not suitable for development. Disabled for Web with threads due to Emscripten limitations.
+      lto_linux:
+        description: "LTO mode for Linux builds"
         required: true
         type: choice
         options:
           - none
           - auto
+          - full
+          - thin
         default: auto
+      lto_windows:
+        description: "LTO mode for Windows builds"
+        required: true
+        type: choice
+        options:
+          - none
+          - auto
+          - full
+          - thin
+        default: auto
+      lto_macos:
+        description: "LTO mode for macOS builds"
+        required: true
+        type: choice
+        options:
+          - none
+          - auto
+          - full
+          - thin
+        default: auto
+      lto_android:
+        description: "LTO mode for Android builds"
+        required: true
+        type: choice
+        options:
+          - none
+          - auto
+          - full
+          - thin
+        default: auto
+      lto_ios:
+        description: "LTO mode for iOS builds"
+        required: true
+        type: choice
+        options:
+          - none
+          - auto
+          - full
+          - thin
+        default: auto
+      lto_web:
+        description: "LTO mode for Web builds (Ignored for threaded web)"
+        required: true
+        type: choice
+        options:
+          - none
+          - auto
+          - full
+          - thin
+        default: none
       use_cache:
-        description: |
-          Use Cache: Whether to use caching for the build process (build speed is boosted significantly and you don't waste as much GitHub resources). Set to false if your project is large and you want to avoid using cache to prevent storage limit issues.
+        description: "Use Cache: Speed up compilation using SCons caching."
         required: false
         type: boolean
         default: true
       clear_all_cache:
-        description: |
-          Clear All Cache: Clear all GitHub Actions caches in the repository before starting the build. Useful if caches are corrupted, outdated, or approaching the storage limit. This will delete all caches, so use with caution. This is a perfect option if you are switching to another godot-cpp branch, build profile or if you are experiencing issues with the cache.
+        description: "Clear All Cache: Clear all GitHub Actions caches before building."
         required: false
         type: boolean
         default: false
@@ -109,26 +148,27 @@ jobs:
       matrix:
         target:
           [
-            { platform: linux, arch: x86_32, os: ubuntu-22.04 },
-            { platform: linux, arch: x86_64, os: ubuntu-22.04 },
-            { platform: linux, arch: arm32, os: ubuntu-22.04-arm },
-            { platform: linux, arch: arm64, os: ubuntu-22.04-arm },
-            { platform: windows, arch: x86_32, os: windows-latest },
-            { platform: windows, arch: x86_64, os: windows-latest },
-            { platform: windows, arch: arm64, os: windows-latest },
-            { platform: macos, arch: universal, os: macos-latest },
-            { platform: android, arch: x86_64, os: ubuntu-22.04 },
-            { platform: android, arch: arm32, os: ubuntu-22.04 },
-            { platform: android, arch: arm64, os: ubuntu-22.04 },
-            { platform: ios, arch: arm64, os: macos-latest },
-            { platform: web, arch: wasm32, os: ubuntu-22.04, threads: "no" },
-            { platform: web, arch: wasm32, os: ubuntu-22.04, threads: "yes" }
+            { platform: linux, arch: x86_32, os: ubuntu-22.04, lto_input: "${{ github.event.inputs.lto_linux }}" },
+            { platform: linux, arch: x86_64, os: ubuntu-22.04, lto_input: "${{ github.event.inputs.lto_linux }}" },
+            { platform: linux, arch: arm32, os: ubuntu-22.04-arm, lto_input: "${{ github.event.inputs.lto_linux }}" },
+            { platform: linux, arch: arm64, os: ubuntu-22.04-arm, lto_input: "${{ github.event.inputs.lto_linux }}" },
+            { platform: windows, arch: x86_32, os: windows-latest, lto_input: "${{ github.event.inputs.lto_windows }}" },
+            { platform: windows, arch: x86_64, os: windows-latest, lto_input: "${{ github.event.inputs.lto_windows }}" },
+            { platform: windows, arch: arm64, os: windows-latest, lto_input: "${{ github.event.inputs.lto_windows }}" },
+            { platform: macos, arch: universal, os: macos-latest, lto_input: "${{ github.event.inputs.lto_macos }}" },
+            { platform: android, arch: x86_64, os: ubuntu-22.04, lto_input: "${{ github.event.inputs.lto_android }}" },
+            { platform: android, arch: arm32, os: ubuntu-22.04, lto_input: "${{ github.event.inputs.lto_android }}" },
+            { platform: android, arch: arm64, os: ubuntu-22.04, lto_input: "${{ github.event.inputs.lto_android }}" },
+            { platform: ios, arch: arm64, os: macos-latest, lto_input: "${{ github.event.inputs.lto_ios }}" },
+            { platform: web, arch: wasm32, os: ubuntu-22.04, threads: "no", lto_input: "${{ github.event.inputs.lto_web }}" },
+            { platform: web, arch: wasm32, os: ubuntu-22.04, threads: "yes", lto_input: "none" }
           ]
         target-type: ${{ fromJson(needs.init-config.outputs.target_types) }}
         float-precision: ${{ fromJson(needs.init-config.outputs.float_precisions) }}
 
     env:
       PLUGIN_NAME: ${{ needs.init-config.outputs.plugin_name }}
+      GODOT_PROJECT_FOLDER: ""
 
     runs-on: ${{ matrix.target.os }}
     steps:
@@ -143,7 +183,7 @@ jobs:
         run: |
           NAME="${{ env.PLUGIN_NAME }}.${{ matrix.target.platform }}.${{ matrix.target-type }}.${{ matrix.target.arch }}.${{ matrix.float-precision }}${{ (matrix.target.platform == 'web' && matrix.target.threads == 'yes') && '.threads' || '' }}"
           echo "build_name=$NAME" >> $GITHUB_OUTPUT
-          echo "cache_name=${NAME//./_}_${{ github.event.inputs.lto }}" >> $GITHUB_OUTPUT
+          echo "cache_name=${NAME//./_}_${{ matrix.target.lto_input }}" >> $GITHUB_OUTPUT
 
       - name: Install multilib support
         if: ${{ matrix.target.platform == 'linux' && matrix.target.arch == 'x86_32' }}
@@ -177,10 +217,8 @@ jobs:
           fi
 
           LTO_FLAG=""
-          if [[ "${{ github.event.inputs.lto }}" = "auto" && "${{ matrix.target-type }}" = "template_release" ]]; then
-            if [[ "${{ matrix.target.platform }}" = "linux" || "${{ matrix.target.platform }}" = "windows" || "${{ matrix.target.platform }}" = "macos" || "${{ matrix.target.platform }}" = "android" || "${{ matrix.target.platform }}" = "ios" ]]; then
-              LTO_FLAG=" lto=auto"
-            fi
+          if [ "${{ matrix.target-type }}" = "template_release" ] && [ "${{ matrix.target.lto_input }}" != "none" ]; then
+            LTO_FLAG=" lto=${{ matrix.target.lto_input }}"
           fi
 
           scons target=${{ matrix.target-type }} \
@@ -225,35 +263,35 @@ jobs:
         with:
           path: artifacts
 
-      - name: Organize artifacts
+      - name: Organize release package structure
         run: |
-          mkdir -p "${{ env.PLUGIN_NAME }}/bin"
+          STAGING_DIR="addons/${{ env.PLUGIN_NAME }}"
+          mkdir -p "$STAGING_DIR/bin"
+
           for platform_dir in artifacts/*; do
             [ -d "$platform_dir" ] || continue
             for p in $(find "$platform_dir" -mindepth 1 -maxdepth 1 -type d); do
               platform_name=$(basename "$p")
-              mkdir -p "${{ env.PLUGIN_NAME }}/bin/$platform_name"
-              cp -R "$p/"* "${{ env.PLUGIN_NAME }}/bin/$platform_name/" || true
+              mkdir -p "$STAGING_DIR/bin/$platform_name"
+              cp -R "$p/"* "$STAGING_DIR/bin/$platform_name/" || true
             done
           done
 
-      - name: Copy .gdextension file
-        run: |
-          PROJECT_DIR=$(python3 -c "from tools.paths import get_godot_project_dir; print(get_godot_project_dir())")
-          if [ -f "$PROJECT_DIR/${{ env.PLUGIN_NAME }}/${{ env.PLUGIN_NAME }}.gdextension" ]; then
-            cp "$PROJECT_DIR/${{ env.PLUGIN_NAME }}/${{ env.PLUGIN_NAME }}.gdextension" "${{ env.PLUGIN_NAME }}/${{ env.PLUGIN_NAME }}.gdextension"
-          elif [ -f "${{ env.PLUGIN_NAME }}.gdextension" ]; then
-            cp "${{ env.PLUGIN_NAME }}.gdextension" "${{ env.PLUGIN_NAME }}/${{ env.PLUGIN_NAME }}.gdextension"
+          if [ -d "icons" ]; then
+            cp -R "icons" "$STAGING_DIR/icons"
           fi
 
-      - name: Copy LICENSE
-        run: |
-          if ls LICENSE* >/dev/null 2>&1; then
-            cp $(ls LICENSE* | head -n 1) "${{ env.PLUGIN_NAME }}/LICENSE"
+          if [ -f "${{ env.PLUGIN_NAME }}.gdextension" ]; then
+            cp "${{ env.PLUGIN_NAME }}.gdextension" "$STAGING_DIR/${{ env.PLUGIN_NAME }}.gdextension"
+          fi
+
+          if [ -f "README.md" ]; then
+            cp "README.md" "$STAGING_DIR/README.md"
           fi
 
       - name: Create zip archive
-        run: zip -r "${{ env.PLUGIN_NAME }}.zip" "${{ env.PLUGIN_NAME }}"
+        run: |
+          zip -r "${{ env.PLUGIN_NAME }}.zip" addons
 
       - name: Upload final artifact
         uses: actions/upload-artifact@v4
