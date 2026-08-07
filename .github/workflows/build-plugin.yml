@@ -71,7 +71,17 @@ on:
           - thin
         default: auto
       lto_web:
-        description: "LTO mode for Web builds (Ignored for threaded web)"
+        description: "LTO mode for standard Web (non-threaded) builds"
+        required: true
+        type: choice
+        options:
+          - none
+          - auto
+          - full
+          - thin
+        default: auto
+      lto_web_threads:
+        description: "WARNING: Must stay 'none'! LTO is broken/unsupported for threaded web builds."
         required: true
         type: choice
         options:
@@ -161,7 +171,7 @@ jobs:
             { platform: android, arch: arm64, os: ubuntu-22.04, lto_input: "${{ github.event.inputs.lto_android }}" },
             { platform: ios, arch: arm64, os: macos-latest, lto_input: "${{ github.event.inputs.lto_ios }}" },
             { platform: web, arch: wasm32, os: ubuntu-22.04, threads: "no", lto_input: "${{ github.event.inputs.lto_web }}" },
-            { platform: web, arch: wasm32, os: ubuntu-22.04, threads: "yes", lto_input: "none" }
+            { platform: web, arch: wasm32, os: ubuntu-22.04, threads: "yes", lto_input: "${{ github.event.inputs.lto_web_threads }}" }
           ]
         target-type: ${{ fromJson(needs.init-config.outputs.target_types) }}
         float-precision: ${{ fromJson(needs.init-config.outputs.float_precisions) }}
@@ -289,13 +299,14 @@ jobs:
             cp "README.md" "$STAGING_DIR/README.md"
           fi
 
-      - name: Create zip archive
+      - name: Create flat zip archive
         run: |
-          zip -r "${{ env.PLUGIN_NAME }}.zip" addons
+          cd addons
+          zip -r "../${{ env.PLUGIN_NAME }}.zip" "${{ env.PLUGIN_NAME }}"
 
       - name: Upload final artifact
         uses: actions/upload-artifact@v4
         with:
-          name: "finished_unzip_me"
+          name: "${{ env.PLUGIN_NAME }}"
           path: "${{ env.PLUGIN_NAME }}.zip"
           retention-days: 1
