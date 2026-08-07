@@ -142,20 +142,20 @@ jobs:
       matrix:
         target:
           [
-            { platform: linux, arch: x86_32, os: ubuntu-22.04, lto_input: "${{ github.event.inputs.lto_linux }}" },
-            { platform: linux, arch: x86_64, os: ubuntu-22.04, lto_input: "${{ github.event.inputs.lto_linux }}" },
-            { platform: linux, arch: arm32, os: ubuntu-22.04-arm, lto_input: "${{ github.event.inputs.lto_linux }}" },
-            { platform: linux, arch: arm64, os: ubuntu-22.04-arm, lto_input: "${{ github.event.inputs.lto_linux }}" },
+            # { platform: linux, arch: x86_32, os: ubuntu-22.04, lto_input: "${{ github.event.inputs.lto_linux }}" },
+            # { platform: linux, arch: x86_64, os: ubuntu-22.04, lto_input: "${{ github.event.inputs.lto_linux }}" },
+            # { platform: linux, arch: arm32, os: ubuntu-22.04-arm, lto_input: "${{ github.event.inputs.lto_linux }}" },
+            # { platform: linux, arch: arm64, os: ubuntu-22.04-arm, lto_input: "${{ github.event.inputs.lto_linux }}" },
             { platform: windows, arch: x86_32, os: windows-latest, lto_input: "${{ github.event.inputs.lto_windows }}" },
             { platform: windows, arch: x86_64, os: windows-latest, lto_input: "${{ github.event.inputs.lto_windows }}" },
             { platform: windows, arch: arm64, os: windows-latest, lto_input: "${{ github.event.inputs.lto_windows }}" },
-            { platform: macos, arch: universal, os: macos-latest, lto_input: "${{ github.event.inputs.lto_macos }}" },
-            { platform: android, arch: x86_64, os: ubuntu-22.04, lto_input: "${{ github.event.inputs.lto_android }}" },
-            { platform: android, arch: arm32, os: ubuntu-22.04, lto_input: "${{ github.event.inputs.lto_android }}" },
-            { platform: android, arch: arm64, os: ubuntu-22.04, lto_input: "${{ github.event.inputs.lto_android }}" },
-            { platform: ios, arch: arm64, os: macos-latest, lto_input: "${{ github.event.inputs.lto_ios }}" },
-            { platform: web, arch: wasm32, os: ubuntu-22.04, threads: "no", lto_input: "${{ github.event.inputs.lto_web }}" },
-            { platform: web, arch: wasm32, os: ubuntu-22.04, threads: "yes", lto_input: "${{ github.event.inputs.lto_web_threads }}" }
+            # { platform: macos, arch: universal, os: macos-latest, lto_input: "${{ github.event.inputs.lto_macos }}" },
+            # { platform: android, arch: x86_64, os: ubuntu-22.04, lto_input: "${{ github.event.inputs.lto_android }}" },
+            # { platform: android, arch: arm32, os: ubuntu-22.04, lto_input: "${{ github.event.inputs.lto_android }}" },
+            # { platform: android, arch: arm64, os: ubuntu-22.04, lto_input: "${{ github.event.inputs.lto_android }}" },
+            # { platform: ios, arch: arm64, os: macos-latest, lto_input: "${{ github.event.inputs.lto_ios }}" },
+            # { platform: web, arch: wasm32, os: ubuntu-22.04, threads: "no", lto_input: "${{ github.event.inputs.lto_web }}" },
+            # { platform: web, arch: wasm32, os: ubuntu-22.04, threads: "yes", lto_input: "${{ github.event.inputs.lto_web_threads }}" }
           ]
         target-type: ${{ fromJson(needs.init-config.outputs.target_types) }}
 
@@ -183,7 +183,6 @@ jobs:
         run: |
           sudo apt-get update && sudo apt-get install -y gcc-multilib g++-multilib
 
-      # SKIPPED for Windows: setup-godot-cpp pulls in MinGW which breaks MSVC.
       - name: Setup godot-cpp (Non-Windows)
         if: ${{ matrix.target.platform != 'windows' }}
         uses: ./godot-cpp/.github/actions/setup-godot-cpp
@@ -191,23 +190,11 @@ jobs:
           platform: ${{ matrix.target.platform }}
           em-version: 3.1.62
 
-      # Windows-specific custom setup: MSVC toolchain + Python + SCons
       - name: Setup MSVC Environment (Windows)
         if: ${{ matrix.target.platform == 'windows' }}
         uses: ilammy/msvc-dev-cmd@v1
         with:
           arch: ${{ matrix.target.arch == 'x86_32' && 'x86' || (matrix.target.arch == 'arm64' && 'arm64' || 'x64') }}
-
-      - name: Setup Python (Windows)
-        if: ${{ matrix.target.platform == 'windows' }}
-        uses: actions/setup-python@v5
-        with:
-          python-version: '3.x'
-
-      - name: Install SCons (Windows)
-        if: ${{ matrix.target.platform == 'windows' }}
-        shell: pwsh
-        run: python -m pip install scons
 
       - name: Set SCONS_CACHE
         if: ${{ github.event.inputs.use_cache == 'true' }}
@@ -250,6 +237,13 @@ jobs:
         if: ${{ matrix.target.platform == 'windows' }}
         shell: pwsh
         run: |
+          if ($env:SCONS_CACHE) {
+              $env:SCONS_CACHE = [System.IO.Path]::GetFullPath($env:SCONS_CACHE)
+              if (!(Test-Path $env:SCONS_CACHE)) {
+                  New-Item -ItemType Directory -Force -Path $env:SCONS_CACHE | Out-Null
+              }
+          }
+
           $ltoFlag = ""
           if ("${{ matrix.target-type }}" -eq "template_release" -and "${{ matrix.target.lto_input }}" -ne "none") {
               $ltoFlag = " lto=${{ matrix.target.lto_input }}"
