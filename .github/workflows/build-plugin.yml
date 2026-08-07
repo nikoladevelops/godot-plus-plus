@@ -246,6 +246,14 @@ jobs:
           python -m pip install --upgrade pip
           python -m pip install scons
 
+          # Add Python Scripts directory to PATH so 'scons' is available as a command
+          $pythonScriptsPath = python -c "import sysconfig; print(sysconfig.get_path('scripts'))"
+          Write-Host "Adding Python Scripts to PATH: $pythonScriptsPath"
+          $env:PATH = "$env:PATH;$pythonScriptsPath"
+
+          # Verify scons is accessible
+          scons --version
+
           if ($env:SCONS_CACHE) {
               $env:SCONS_CACHE = [System.IO.Path]::GetFullPath($env:SCONS_CACHE)
               if (!(Test-Path $env:SCONS_CACHE)) {
@@ -258,7 +266,7 @@ jobs:
               $ltoFlag = " lto=${{ matrix.target.lto_input }}"
           }
 
-          $sconsCmd = "python -m scons target=${{ matrix.target-type }} platform=windows arch=${{ matrix.target.arch }} precision=single$ltoFlag"
+          $sconsCmd = "scons target=${{ matrix.target-type }} platform=windows arch=${{ matrix.target.arch }} precision=single$ltoFlag"
           Write-Host "Running: $sconsCmd"
           Invoke-Expression $sconsCmd
 
