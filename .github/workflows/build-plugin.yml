@@ -142,20 +142,20 @@ jobs:
       matrix:
         target:
           [
-            # { platform: linux, arch: x86_32, os: ubuntu-22.04, lto_input: "${{ github.event.inputs.lto_linux }}" },
-            # { platform: linux, arch: x86_64, os: ubuntu-22.04, lto_input: "${{ github.event.inputs.lto_linux }}" },
-            # { platform: linux, arch: arm32, os: ubuntu-22.04-arm, lto_input: "${{ github.event.inputs.lto_linux }}" },
-            # { platform: linux, arch: arm64, os: ubuntu-22.04-arm, lto_input: "${{ github.event.inputs.lto_linux }}" },
+            { platform: linux, arch: x86_32, os: ubuntu-22.04, lto_input: "${{ github.event.inputs.lto_linux }}" },
+            { platform: linux, arch: x86_64, os: ubuntu-22.04, lto_input: "${{ github.event.inputs.lto_linux }}" },
+            { platform: linux, arch: arm32, os: ubuntu-22.04-arm, lto_input: "${{ github.event.inputs.lto_linux }}" },
+            { platform: linux, arch: arm64, os: ubuntu-22.04-arm, lto_input: "${{ github.event.inputs.lto_linux }}" },
             { platform: windows, arch: x86_32, os: windows-latest, lto_input: "${{ github.event.inputs.lto_windows }}" },
             { platform: windows, arch: x86_64, os: windows-latest, lto_input: "${{ github.event.inputs.lto_windows }}" },
             { platform: windows, arch: arm64, os: windows-latest, lto_input: "${{ github.event.inputs.lto_windows }}" },
-            # { platform: macos, arch: universal, os: macos-latest, lto_input: "${{ github.event.inputs.lto_macos }}" },
-            # { platform: android, arch: x86_64, os: ubuntu-22.04, lto_input: "${{ github.event.inputs.lto_android }}" },
-            # { platform: android, arch: arm32, os: ubuntu-22.04, lto_input: "${{ github.event.inputs.lto_android }}" },
-            # { platform: android, arch: arm64, os: ubuntu-22.04, lto_input: "${{ github.event.inputs.lto_android }}" },
-            # { platform: ios, arch: arm64, os: macos-latest, lto_input: "${{ github.event.inputs.lto_ios }}" },
-            # { platform: web, arch: wasm32, os: ubuntu-22.04, threads: "no", lto_input: "${{ github.event.inputs.lto_web }}" },
-            # { platform: web, arch: wasm32, os: ubuntu-22.04, threads: "yes", lto_input: "${{ github.event.inputs.lto_web_threads }}" }
+            { platform: macos, arch: universal, os: macos-latest, lto_input: "${{ github.event.inputs.lto_macos }}" },
+            { platform: android, arch: x86_64, os: ubuntu-22.04, lto_input: "${{ github.event.inputs.lto_android }}" },
+            { platform: android, arch: arm32, os: ubuntu-22.04, lto_input: "${{ github.event.inputs.lto_android }}" },
+            { platform: android, arch: arm64, os: ubuntu-22.04, lto_input: "${{ github.event.inputs.lto_android }}" },
+            { platform: ios, arch: arm64, os: macos-latest, lto_input: "${{ github.event.inputs.lto_ios }}" },
+            { platform: web, arch: wasm32, os: ubuntu-22.04, threads: "no", lto_input: "${{ github.event.inputs.lto_web }}" },
+            { platform: web, arch: wasm32, os: ubuntu-22.04, threads: "yes", lto_input: "${{ github.event.inputs.lto_web_threads }}" }
           ]
         target-type: ${{ fromJson(needs.init-config.outputs.target_types) }}
 
@@ -195,6 +195,17 @@ jobs:
         uses: ilammy/msvc-dev-cmd@v1
         with:
           arch: ${{ matrix.target.arch == 'x86_32' && 'x86' || (matrix.target.arch == 'arm64' && 'arm64' || 'x64') }}
+
+      - name: Setup Python & SCons (Windows)
+        if: ${{ matrix.target.platform == 'windows' }}
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.x'
+
+      - name: Install SCons (Windows)
+        if: ${{ matrix.target.platform == 'windows' }}
+        shell: pwsh
+        run: python -m pip install scons
 
       - name: Set SCONS_CACHE
         if: ${{ github.event.inputs.use_cache == 'true' }}
@@ -249,7 +260,7 @@ jobs:
               $ltoFlag = " lto=${{ matrix.target.lto_input }}"
           }
 
-          $sconsCmd = "scons target=${{ matrix.target-type }} platform=windows arch=${{ matrix.target.arch }} precision=single$ltoFlag"
+          $sconsCmd = "python -m scons target=${{ matrix.target-type }} platform=windows arch=${{ matrix.target.arch }} precision=single$ltoFlag"
           Write-Host "Running: $sconsCmd"
           Invoke-Expression $sconsCmd
 
