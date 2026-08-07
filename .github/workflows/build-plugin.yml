@@ -236,6 +236,11 @@ jobs:
       - name: Build GDExtension
         shell: bash
         run: |
+          # If on Windows, completely strip MinGW directories from PATH so SCons cannot pick up g++
+          if [ "${{ matrix.target.platform }}" = "windows" ]; then
+            export PATH=$(echo "$PATH" | tr ':' '\n' | grep -iv "mingw" | tr '\n' ':')
+          fi
+
           THREADS_FLAG=""
           if [ "${{ matrix.target.platform }}" = "web" ]; then
             THREADS_FLAG=" threads=${{ matrix.target.threads }}"
