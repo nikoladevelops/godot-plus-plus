@@ -68,13 +68,13 @@ def write_info_plist(target_nodes, source_nodes, env, plist_content: str) -> Non
         f.write(plist_content)
 
 
-def build_apple_framework(env, libname: str, lib_filename: str, precision: str, bundle_id_prefix: str, sources: list, target: str) -> tuple:
+def build_apple_framework(env, libname: str, lib_filename: str, precision: str, bundle_id_prefix: str, sources: list, build_target: str) -> tuple:
     """
     Encapsulates all complex macOS framework and iOS xcframework command chaining,
     keeping SConstruct clean.
     Returns a tuple of (library_target, install_source_path).
     """
-    if not target:
+    if not build_target:
         raise ValueError("The build target parameter is required.")
 
     platform = env['platform']
@@ -83,17 +83,18 @@ def build_apple_framework(env, libname: str, lib_filename: str, precision: str, 
     if platform == 'macos':
         if env.get('arch') != 'universal':
             env['arch'] = 'universal'
-        framework_name = f"lib{libname}.macos.{target}.{precision}.framework"
-        framework_binary = f"lib{libname}.macos.{target}.{precision}"
+        framework_name = f"lib{libname}.macos.{build_target}.{precision}.framework"
+        framework_binary = f"lib{libname}.macos.{build_target}.{precision}"
         framework_dir = f"bin/{platform}/{framework_name}"
         plist_file = f"{framework_dir}/Info.plist"
 
-        # Lambda captures 'target' securely from enclosing function scope without variable shadowing
+        # Lambda uses parameters 'target', 'source', 'env' to match SCons keyword invocation,
+        # while safely capturing 'build_target' from the outer function scope.
         env.Command(
             plist_file,
             [],
-            lambda t, s, e: write_info_plist(
-                t, s, e, generate_info_plist(libname, 'macos', target, precision, bundle_id_prefix)
+            lambda target, source, env: write_info_plist(
+                target, source, env, generate_info_plist(libname, 'macos', build_target, precision, bundle_id_prefix)
             )
         )
         library = env.Command(
@@ -111,17 +112,17 @@ def build_apple_framework(env, libname: str, lib_filename: str, precision: str, 
     else:  # ios
         if not env.get('arch'):
             env['arch'] = 'arm64'
-        temp_fw_name = f"lib{libname}.ios.{target}.{precision}.framework"
-        framework_binary = f"lib{libname}.ios.{target}.{precision}"
-        framework_name = f"lib{libname}.ios.{target}.{precision}.xcframework"
+        temp_fw_name = f"lib{libname}.ios.{build_target}.{precision}.framework"
+        framework_binary = f"lib{libname}.ios.{build_target}.{precision}"
+        framework_name = f"lib{libname}.ios.{build_target}.{precision}.xcframework"
         temp_fw_dir = f"bin/{platform}/{temp_fw_name}"
         plist_file = f"{temp_fw_dir}/Info.plist"
 
         env.Command(
             plist_file,
             [],
-            lambda t, s, e: write_info_plist(
-                t, s, e, generate_info_plist(libname, 'ios', target, precision, bundle_id_prefix)
+            lambda target, source, env: write_info_plist(
+                target, source, env, generate_info_plist(libname, 'ios', build_target, precision, bundle_id_prefix)
             )
         )
         temp_framework = env.Command(
