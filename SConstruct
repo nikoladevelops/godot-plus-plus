@@ -67,10 +67,14 @@ if is_debug_target or (env.get("target") == "template_release" and editor_target
         print("Skipping class reference (pre-4.3 baseline target).")
 
 lib_filename = get_library_filename(env, libname, precision)
+build_target = env.get('target')
+
+if not build_target:
+    raise ValueError("SCons environment is missing the required 'target' variable.")
 
 # Library Build Targets (Delegates Apple Frameworks to helper or builds generic shared library)
 if env['platform'] in ['macos', 'ios']:
-    library, install_source = build_apple_framework(env, libname, lib_filename, precision, bundle_id_prefix, sources)
+    library, install_source = build_apple_framework(env, libname, lib_filename, precision, bundle_id_prefix, sources, build_target)
 else:
     library = env.SharedLibrary(f"bin/{env['platform']}/{lib_filename}", source=sources)
     install_source = library
