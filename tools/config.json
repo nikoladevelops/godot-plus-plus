@@ -1,5 +1,5 @@
 {
-  "pluginName": "testplugin",
+  "pluginName": "plugin_name",
   "godotVersion": "4.7",
   "godotActivePath": "/usr/bin/godot",
   "savedGodotPaths": [

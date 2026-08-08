@@ -20,6 +20,14 @@ else:
 
 # Base Configuration Setup
 libname = config.getPluginName()
+godot_version = config.getGodotVersion()
+
+# Automatically inject config.json Godot Target version into SCons arguments so godot-cpp picks it up natively
+# (for CI runners that call "scons" without providing the actual target Godot API version)
+if "api_version" not in ARGUMENTS and godot_version:
+    print(f"Selected Godot API version: {godot_version}")
+    ARGUMENTS["api_version"] = godot_version
+
 env = Environment(tools=["default"], PLATFORM="")
 
 customs = [os.path.abspath("custom.py")]
