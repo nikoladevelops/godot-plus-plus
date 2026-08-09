@@ -117,11 +117,13 @@ def run_quick_setup_wizard():
     print(" Godot++ Quick Setup Wizard")
     print("=" * 65)
     print("This wizard will guide you through setting up your project for the first time:")
-    print(" 1. Update godot-cpp submodule")
-    print(" 2. Set your target Godot version")
-    print(" 3. Choose your build profile (2D / 3D)")
-    print(" 4. Rename your plugin")
-    print(" 5. Compile your first Debug build")
+    print("  1. Update godot-cpp submodule")
+    print("  2. Set your target Godot version")
+    print("  3. Select your Godot Engine Executable Path")
+    print("  4. Select your Godot Project (Game) Folder")
+    print("  5. Choose your build profile (2D / 3D)")
+    print("  6. Rename your plugin")
+    print("  7. Compile your first Debug build")
     print("-" * 65)
 
     proceed = input("Do you want to start the quick setup wizard now? (y/q to quit): ").strip().lower()
@@ -131,6 +133,8 @@ def run_quick_setup_wizard():
     steps = [
         ("Updating godot-cpp submodule...", "update_godot_cpp.py"),
         ("Setting Godot Target Version...", "change_godot_target_version.py"),
+        ("Selecting Godot Engine Executable Path...", "select_godot_path.py"),
+        ("Selecting Godot Project Folder...", "select_godot_project.py"),
         ("Selecting Build Profile...", "select_build_profile.py"),
         ("Renaming Plugin...", "renaming.py"),
         ("Compiling Initial Debug Build...", "compile_debug_build.py"),
