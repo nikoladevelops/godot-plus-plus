@@ -126,6 +126,8 @@ Instead of VS Code, you could try using [Zed](https://zed.dev/), it is insanely 
 
 After the initial setup is done, you can select option `3` and see code compilation options. Every time you make a change in your code, you have to save your file and then re-compile.
 
+---
+
 ## Python Helper Tool Scripts
 
 **It is also worth exploring all other menus, since there are lots of helpful tool scripts!**
@@ -176,6 +178,8 @@ Submenu: Advanced & Workflow Options
 --------------------------------------------------
 ```
 
+---
+
 ## Some advice
 1. Don't modify the godot-cpp classes, always make your own - you can choose to inherit from theirs or use pure C++ classes (pure classes won't be exposed to Godot)
 2. If you need source code of some classes, check [Godot Engine's source code](https://github.com/godotengine/godot)
@@ -183,6 +187,8 @@ Submenu: Advanced & Workflow Options
 4. When making brand new classes ensure you use `GDCLASS`, and `bind_methods()` and finally ensure you register the actual class inside `register_types.cpp` or else it won't be visible inside the editor
 5. Usually when you are writing C++ code, the selected Godot project should be open - you write some C++ code, then compile and you repeat that over and over. You might not see some of the changes immediately, so you need to restart the Godot project <b>(Project -> Reload Current Project)</b>
 6. You can edit the ```.github/workflows/build-plugin.yml``` file and add or remove operating systems and architectures for which you want to compile your plugin
+
+---
 
 ## Does My Plugin Work On Other Operating Systems?
 Right now every time you compile your code, it is being compiled for your own operating system and your own architecture, but since you want your plugin to be used by other people that might be on a different operating system (whether they are using the editor or trying to export their game with your plugin) we need to use GitHub Actions to test if everything is working correctly
@@ -196,6 +202,7 @@ Every time you've added features to your plugin and you are wondering if it work
 
 <b>Warning:</b> You should not use these builds as a plugin release.. they only test if everything is compiling correctly instead of wasting more resources for optimizations
 
+---
 
 ## My C++ GDExtension Plugin Is Ready, I Want To Publish It
 If you compiled a debug build first, and you saw that everything is working and all your features are truly done, then you can go ahead and do your full plugin compilation that compiles `debug` builds used by the editor as well as `release` builds that are meant to be used by the exported game of the user.
@@ -207,6 +214,7 @@ Again a `finished_unzip_me` that contains a zip of your plugin will be generated
 1. Unzip it to get the actual zip for publishing
 2. Publish your plugin zip file as a release on your GitHub Repository / [Godot Asset Store](https://store.godotengine.org/) / [Itch.io](https://itch.io/) or give it to someone to test
 
+---
 
 ## How Does Someone Download And Install The Plugin?
 
@@ -214,6 +222,8 @@ Again a `finished_unzip_me` that contains a zip of your plugin will be generated
 2. Unzip it inside a Godot project
 
 Make sure that users keep your plugin in the `addons` folder, since that's where plugins should live. The Godot Asset Store also expects the same.
+
+---
 
 ## Support
 If you wish to support me you can do so here - https://ko-fi.com/realnikich or https://patreon.com/realnikich
