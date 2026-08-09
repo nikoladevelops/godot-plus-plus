@@ -1,6 +1,7 @@
 [configuration]
 entry_symbol = "plugin_name_init"
-compatibility_minimum = "4.5"
+compatibility_minimum = "4.7"
+reloadable = true
 
 [libraries]
 ; Relative paths ensure that our GDExtension can be placed anywhere in the project directory.
@@ -58,3 +59,6 @@ ios.debug = {
 ios.release = {
   "./bin/ios/libplugin_name.ios.template_release.single.xcframework": ""
 }
+
+[icons]
+ItemData = "./icons/ItemData.svg"

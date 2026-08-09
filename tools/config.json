@@ -1,0 +1,13 @@
+{
+  "pluginName": "plugin_name",
+  "godotVersion": "4.7",
+  "godotActivePath": "",
+  "savedGodotPaths": [],
+  "godotProjectFolder": "",
+  "ltoMode": "none",
+  "selectedBuildProfile": "build_profile.json",
+  "extensionApiPath": "godot-cpp/gdextension/extension_api.json",
+  "reloadable": true,
+  "editorTargetMode": "debug",
+  "debugSymbols": "no"
+}
