@@ -340,17 +340,31 @@ jobs:
             done
           done
 
+          # Copy icons folder if it exists
           if [ -d "icons" ]; then
             cp -R "icons" "$STAGING_DIR/icons"
           fi
 
+          # Copy .gdextension manifest if it exists
           if [ -f "${{ env.PLUGIN_NAME }}.gdextension" ]; then
             cp "${{ env.PLUGIN_NAME }}.gdextension" "$STAGING_DIR/${{ env.PLUGIN_NAME }}.gdextension"
           fi
 
-          if [ -f "README.md" ]; then
-            cp "README.md" "$STAGING_DIR/README.md"
-          fi
+          # Safely copy any README variant (README, README.md, README.txt, etc.) if it exists
+          find . -maxdepth 1 -iname "readme*" -type f | head -n 1 | while read -r readme_file; do
+            if [ -n "$readme_file" ] && [ -f "$readme_file" ]; then
+              cp "$readme_file" "$STAGING_DIR/"
+              echo "Included README: $readme_file"
+            fi
+          done
+
+          # Safely copy any LICENSE variant (LICENSE, LICENSE.md, LICENSE.txt, etc.) if it exists
+          find . -maxdepth 1 -iname "license*" -type f | head -n 1 | while read -r license_file; do
+            if [ -n "$license_file" ] && [ -f "$license_file" ]; then
+              cp "$license_file" "$STAGING_DIR/"
+              echo "Included LICENSE: $license_file"
+            fi
+          done
 
       - name: Create zip archive
         run: |

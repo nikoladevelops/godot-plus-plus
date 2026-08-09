@@ -53,13 +53,29 @@ def package_plugin_release() -> None:
         print(f"Error: Master .gdextension file not found at {root_gdextension_path}", file=sys.stderr)
         sys.exit(1)
 
-    # Copy the README.md file into the plugin directory if it exists
-    readme_path = PROJECT_ROOT / "README.md"
-    if readme_path.exists():
-        print("Copying README.md file...")
-        shutil.copy(readme_path, plugin_target_dir / "README.md")
-    else:
-        print("Note: README.md not found in project root (skipping).")
+    # Safely copy any README variant (README, README.md, README.txt, etc.) if it exists
+    readme_copied = False
+    for file_path in PROJECT_ROOT.iterdir():
+        if file_path.is_file() and file_path.name.lower().startswith("readme"):
+            dest_path = plugin_target_dir / file_path.name
+            print(f"Copying documentation: {file_path.name}")
+            shutil.copy(file_path, dest_path)
+            readme_copied = True
+            break
+    if not readme_copied:
+        print("Note: No README file found in project root (skipping).")
+
+    # Safely copy any LICENSE variant (LICENSE, LICENSE.md, LICENSE.txt, etc.) if it exists
+    license_copied = False
+    for file_path in PROJECT_ROOT.iterdir():
+        if file_path.is_file() and file_path.name.lower().startswith("license"):
+            dest_path = plugin_target_dir / file_path.name
+            print(f"Copying license: {file_path.name}")
+            shutil.copy(file_path, dest_path)
+            license_copied = True
+            break
+    if not license_copied:
+        print("Note: No LICENSE file found in project root (skipping).")
 
     # Create the archive zip file named after the plugin inside releases/ root
     zip_output_base = releases_dir / plugin_name
@@ -87,7 +103,7 @@ def package_plugin_release() -> None:
 if __name__ == "__main__":
     clear_screen()
     print("GDExtension Export Local Plugin Zip Tool by @realNikich\n")
-    print("This utility bundles your local build binaries, icons, README, and .gdextension")
+    print("This utility bundles your local build binaries, icons, README, LICENSE, and .gdextension")
     print("manifest into a clean zip archive, ready for local distribution or deployment.\n")
     print("Tip: While GitHub Actions remains the best approach for multi-platform releases,")
     print("this tool gives you full local control.\n")
