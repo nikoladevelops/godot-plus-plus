@@ -1,6 +1,5 @@
 {
   "file_scan_exclusions": [
-    "vscode",
     ".git",
     "*.pdb",
     "src/**/*.o",
@@ -71,7 +70,6 @@
     "bin",
     "test_project",
     "releases",
-    //"tools",
     ".clang-format",
     ".editorconfig",
     ".gdignore",
@@ -80,19 +78,11 @@
     ".sconsign.dblite",
     "compile_commands.json",
     "methods.py",
-    //"2d_build_profile.json",
-    //"3d_build_profile.json",
-    //"build_profile.json",
-    "LICENSE",
-    //"README.md",
-    //"SConstruct",
-    //".gitignore",
-    //".github",
     "godot-cpp"
   ],
+  "ensure_final_newline_on_save": true,
+  "remove_trailing_whitespace_on_save": true,
   "project_panel": {
     "auto_reveal_entries": false
-  },
-  "ensure_final_newline_on_save": true,
-  "remove_trailing_whitespace_on_save": true
+  }
 }
