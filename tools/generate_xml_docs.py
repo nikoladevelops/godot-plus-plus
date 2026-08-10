@@ -22,11 +22,13 @@ def display_warning() -> None:
     """Display warnings about requirements for generating documentation and handle prompt cancellation."""
     project_dir = get_godot_project_dir()
     print(f"\n{'!' * 80}")
-    print("WARNING: Ensure the Godot Editor is CLOSED before generating documentation.")
-    print("Having the editor open can lock GDExtension binaries (.dll/.so) and cause doctool failures.")
+    print("IMPORTANT WORKFLOW INSTRUCTIONS:")
+    print("1. Ensure the Godot Editor is CLOSED before compiling and generating docs.")
+    print("   (Having the editor open locks the GDExtension binary and prevents SCons from")
+    print("   updating it, which causes doctool to miss your custom classes).")
+    print("2. Ensure you have recently compiled your plugin (debug/release build) so that")
+    print("   the test project's 'bin' folder contains the latest compiled binary.")
     print(f"\nTarget Godot Project Directory: {project_dir}")
-    print("WARNING: Ensure you have compiled your plugin (debug/release build) so that")
-    print("the 'bin' folder contains the latest compiled binaries before running this tool, otherwise no documentation will be generated.")
     print(f"{'!' * 80}")
 
     choice = input("\nPress Enter to continue, or type 'q' to cancel: ").strip().lower()
@@ -44,20 +46,20 @@ def print_documentation_guide() -> None:
     print("You can style descriptions using BBCode-style tags inside the text fields:\n")
 
     print("1. CROSS-REFERENCING CLASSES & MEMBERS:")
-    print("   • [Node2D]                 -> Links to another class reference.")
-    print("   • [method Node.add_child]  -> Links to a specific method.")
-    print("   • [member Node2D.position] -> Links to a class property.")
-    print("   • [param spawn_pos]        -> Highlights a method parameter name.")
-    print("   • [constant OK]            -> Links to an enum or constant value.\n")
+    print("    • [Node2D]                    -> Links to another class reference.")
+    print("    • [method Node.add_child]    -> Links to a specific method.")
+    print("    • [member Node2D.position] -> Links to a class property.")
+    print("    • [param spawn_pos]        -> Highlights a method parameter name.")
+    print("    • [constant OK]            -> Links to an enum or constant value.\n")
 
     print("2. FORMATTING & CODE EXAMPLES:")
-    print("   • [code]true[/code]         -> Inline monospaced code styling.")
-    print("   • [codeblock]")
-    print("     var factory = BulletFactory2D.new()")
-    print("     factory.spawn()")
-    print("     [/codeblock]             -> Multi-line code block display.")
-    print("   • [b]bold text[/b]         -> Bold emphasis formatting.")
-    print("   • [i]italic text[/i]       -> Italic emphasis formatting.")
+    print("    • [code]true[/code]         -> Inline monospaced code styling.")
+    print("    • [codeblock]")
+    print("      var factory = BulletFactory2D.new()")
+    print("      factory.spawn()")
+    print("      [/codeblock]              -> Multi-line code block display.")
+    print("    • [b]bold text[/b]         -> Bold emphasis formatting.")
+    print("    • [i]italic text[/i]       -> Italic emphasis formatting.")
     print(f"{'=' * 80}\n")
 
 
@@ -125,7 +127,7 @@ def main() -> None:
 
     if not godot_executable:
         print("\n[!] ERROR: No active Godot Engine executable path found in configuration.")
-        print("Please run option [14] ('Select Godot Engine Executable Path') from the main setup menu first")
+        print("Please run option ('Select Godot Engine Executable Path') from the main setup menu first")
         print("to configure and select a valid Godot executable before generating documentation.")
         input("\nPress Enter to exit...")
         return
@@ -136,7 +138,7 @@ def main() -> None:
         print(f"\nDone! Check the '{DOCS_SOURCE_DIR}' folder and customize your XML files.")
         print_documentation_guide()
         print(f"Official Documentation Reference: {GODOT_DOCS_URL}")
-        print("\nAfter writing your custom documentation inside the files, you need to recompile your project!")
+        print("\nAfter writing your custom documentation inside the files, remember to recompile your project!")
     else:
         print("\nDocumentation generation process failed.")
 

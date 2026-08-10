@@ -1,0 +1,69 @@
+<?xml version="1.0" encoding="UTF-8" ?>
+<class name="ItemData" inherits="Resource" api_type="extension" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="https://raw.githubusercontent.com/godotengine/godot/master/doc/class.xsd">
+	<brief_description>
+	</brief_description>
+	<description>
+	</description>
+	<tutorials>
+	</tutorials>
+	<methods>
+		<method name="create_10k_numbers">
+			<return type="int[]" />
+			<param index="0" name="min" type="int" />
+			<param index="1" name="max" type="int" />
+			<description>
+			</description>
+		</method>
+		<method name="modify_all_node_names">
+			<return type="void" />
+			<param index="0" name="arr" type="Node[]" />
+			<param index="1" name="new_name" type="String" />
+			<description>
+			</description>
+		</method>
+		<method name="modify_all_node_names_wrong_way">
+			<return type="void" />
+			<param index="0" name="arr" type="Node[]" />
+			<param index="1" name="new_name" type="String" />
+			<description>
+			</description>
+		</method>
+		<method name="print_all_node_names">
+			<return type="void" />
+			<param index="0" name="arr" type="Node[]" />
+			<description>
+			</description>
+		</method>
+		<method name="print_node_name">
+			<return type="void" />
+			<param index="0" name="node" type="Node" />
+			<description>
+			</description>
+		</method>
+		<method name="print_resource_name">
+			<return type="void" />
+			<param index="0" name="resource" type="Resource" />
+			<description>
+			</description>
+		</method>
+		<method name="spawn_custom_scene">
+			<return type="void" />
+			<param index="0" name="scene_to_spawn" type="PackedScene" />
+			<description>
+			</description>
+		</method>
+		<method name="spawn_stuff">
+			<return type="void" />
+			<description>
+			</description>
+		</method>
+	</methods>
+	<members>
+		<member name="description" type="String" setter="set_description" getter="get_description" default="&quot;This is a default item description.&quot;">
+		</member>
+		<member name="name" type="String" setter="set_name" getter="get_name" default="&quot;Default Item&quot;">
+		</member>
+		<member name="price" type="int" setter="set_price" getter="get_price" default="0">
+		</member>
+	</members>
+</class>
