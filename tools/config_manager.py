@@ -12,7 +12,7 @@ class _PluginConfig:
             "godotVersion": "4.7",
             "godotActivePath": "",
             "savedGodotPaths": [],
-            "godotProjectFolder": "test_project",
+            "godotProjectFolder": "",
             "ltoMode": "none",
             "selectedBuildProfile": "build_profile.json",
             "extensionApiPath": "godot-cpp/gdextension/extension_api.json",
