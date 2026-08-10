@@ -43,4 +43,7 @@ if __name__ == "__main__":
         sys.exit(0)
 
     run_scons_clean()
+
+    input("\nPress Enter to continue...")
+
     clean_bin_directories()

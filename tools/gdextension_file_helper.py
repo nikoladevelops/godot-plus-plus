@@ -1,7 +1,6 @@
 import filecmp
 import re
 from pathlib import Path
-from typing import Optional
 
 from paths import get_gdextension_file_path, get_plugin_dir
 
@@ -58,7 +57,7 @@ def purge_old_project_gdextension(old_name: str) -> None:
             print(f"Warning: Could not remove locked file {ext_file.name}: {e}")
 
 
-def set_editor_target_mode(mode: str, file_path: Optional[Path] = None) -> None:
+def set_editor_target_mode(mode: str, file_path: Path | None = None) -> None:
     """
     Updates all `.debug` target entries in [libraries] and [dependencies] inside the
     .gdextension file to point to either 'template_debug' binaries (mode="debug")
@@ -105,7 +104,7 @@ def set_editor_target_mode(mode: str, file_path: Optional[Path] = None) -> None:
     sync_gdextension_to_target_project()
 
 
-def set_reloadable(reloadable: bool, file_path: Optional[Path] = None) -> None:
+def set_reloadable(reloadable: bool, file_path: Path | None = None) -> None:
     """
     Updates or inserts the `reloadable` key under [configuration]
     in the .gdextension manifest using strict lowercase booleans (reloadable = true / false).
@@ -136,13 +135,13 @@ def set_reloadable(reloadable: bool, file_path: Optional[Path] = None) -> None:
     sync_gdextension_to_target_project()
 
 
-def get_target_gdextension_path(custom_path: Optional[Path] = None) -> Path:
+def get_target_gdextension_path(custom_path: Path | None = None) -> Path:
     """Utility to resolve custom_path or default to get_gdextension_file_path()."""
     return custom_path if custom_path is not None else get_gdextension_file_path()
 
 
 def set_compatibility_minimum(
-    min_version: str, file_path: Optional[Path] = None
+    min_version: str, file_path: Path | None = None
 ) -> None:
     """
     Updates or inserts the `compatibility_minimum` key under [configuration]
@@ -173,7 +172,7 @@ def set_compatibility_minimum(
 
 
 def update_section_in_gdextension(
-    section_name: str, key_value_pairs: dict[str, str], file_path: Optional[Path] = None
+    section_name: str, key_value_pairs: dict[str, str], file_path: Path | None = None
 ) -> None:
     """
     Safely replaces or appends a target section (e.g., [icons]) inside a .gdextension file.
@@ -214,7 +213,7 @@ def update_section_in_gdextension(
 
 
 def update_icons_in_gdextension(
-    icon_mappings: dict[str, str], file_path: Optional[Path] = None
+    icon_mappings: dict[str, str], file_path: Path | None = None
 ) -> None:
     """
     Helper shortcut specifically for updating the [icons] section in a .gdextension file.

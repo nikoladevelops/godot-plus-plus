@@ -1,11 +1,8 @@
 # GDExtension Setup and Template Manager by @realNikich
-import os
-import subprocess
 import sys
 
 from tools.config_manager import config
-
-script_dir = os.path.dirname(os.path.abspath(__file__))
+from tools.scons_helpers import clear_screen, run_tool_script
 
 SUBMENUS = {
     "1": {
@@ -47,13 +44,6 @@ SUBMENUS = {
         ],
     },
 }
-
-
-def clear_screen():
-    """Clear the terminal screen cross-platform using subprocess."""
-    cmd = "cls" if os.name == "nt" else "clear"
-    subprocess.run([cmd], check=False)
-
 
 def get_active_path_version() -> str:
     """Helper to find the version tag of the currently active Godot path."""
@@ -100,16 +90,6 @@ def display_dashboard_header():
     print("=" * 65 + "\n")
 
 
-def run_tool_script(script_filename):
-    """Run a script from the tools folder and handle errors/output."""
-    script_path = os.path.join(script_dir, "tools", script_filename)
-    result = subprocess.run([sys.executable, script_path], check=False)
-
-    if result.returncode != 0:
-        print(result.stderr or "An error occurred.")
-        input("Press Enter to continue...")
-
-
 def run_quick_setup_wizard():
     """Walks the user through the standard first-time setup sequence step-by-step."""
     clear_screen()
@@ -118,12 +98,11 @@ def run_quick_setup_wizard():
     print("=" * 65)
     print("This wizard will guide you through setting up your project for the first time:")
     print("  1. Update godot-cpp submodule")
-    print("  2. Set your target Godot version")
+    print("  2. Set your target Godot version, along with new build profile")
     print("  3. Select your Godot Engine Executable Path")
     print("  4. Select your Godot Project (Game) Folder")
-    print("  5. Choose your build profile (2D / 3D)")
-    print("  6. Rename your plugin")
-    print("  7. Compile your first Debug build")
+    print("  5. Rename your plugin")
+    print("  6. Compile your first Debug build")
     print("-" * 65)
 
     proceed = input("Do you want to start the quick setup wizard now? (y/q to quit): ").strip().lower()
@@ -135,7 +114,6 @@ def run_quick_setup_wizard():
         ("Setting Godot Target Version...", "change_godot_target_version.py"),
         ("Selecting Godot Engine Executable Path...", "select_godot_path.py"),
         ("Selecting Godot Project Folder...", "select_godot_project.py"),
-        ("Selecting Build Profile...", "select_build_profile.py"),
         ("Renaming Plugin...", "renaming.py"),
         ("Compiling Initial Debug Build...", "compile_debug_build.py"),
     ]

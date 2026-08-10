@@ -5,7 +5,7 @@
   "savedGodotPaths": [],
   "godotProjectFolder": "",
   "ltoMode": "none",
-  "selectedBuildProfile": "build_profile.json",
+  "selectedBuildProfile": "2d_build_profile.json",
   "extensionApiPath": "godot-cpp/gdextension/extension_api.json",
   "reloadable": true,
   "editorTargetMode": "debug",

@@ -66,9 +66,7 @@
     "include/**/*.d",
     ".cache",
     "__pycache__",
-    "gen",
     "bin",
-    "test_project",
     "releases",
     ".clang-format",
     ".editorconfig",
@@ -78,7 +76,6 @@
     ".sconsign.dblite",
     "compile_commands.json",
     "methods.py",
-    "godot-cpp"
   ],
   "ensure_final_newline_on_save": true,
   "remove_trailing_whitespace_on_save": true,

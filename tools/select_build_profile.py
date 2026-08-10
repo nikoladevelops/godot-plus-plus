@@ -1,19 +1,8 @@
-import subprocess
 import sys
 
 from config_manager import config
-from paths import BUILD_PROFILES_DIR, PROJECT_ROOT
-from scons_helpers import clear_screen
-
-
-def clean_build_files() -> None:
-    """Executes 'scons -c' to clean previous build artifacts."""
-    print("Cleaning old build files...")
-    try:
-        subprocess.run(["scons", "-c"], check=True, cwd=PROJECT_ROOT)
-        print("Build artifacts cleaned successfully.")
-    except (subprocess.CalledProcessError, FileNotFoundError) as e:
-        print(f"Warning: Could not run 'scons -c' clean: {e}. Continuing anyway...")
+from paths import BUILD_PROFILES_DIR
+from scons_helpers import clear_screen, run_scons_clean
 
 
 def select_build_profile():
@@ -46,11 +35,12 @@ def select_build_profile():
         BUILD_PROFILES_DIR.mkdir(parents=True, exist_ok=True)
 
     current_profile = config.getSelectedBuildProfile()
+    print("Please Select The New Build Profile")
     print(f"Currently Active Build Profile: {current_profile}\n")
 
     profiles = sorted(BUILD_PROFILES_DIR.glob("*.json"))
 
-    print("Available Build Profiles:")
+    print("Which Build Profile Do You Want To Use?")
     print("  [0] None (Include all Godot classes - no profile)")
 
     for idx, prof in enumerate(profiles, start=1):
@@ -69,7 +59,7 @@ def select_build_profile():
         if user_input == "0":
             config.setSelectedBuildProfile("none")
             print("\nBuild Profile set to: None (all classes enabled).")
-            clean_build_files()
+            run_scons_clean()
             input("\nPress Enter to continue...")
             return
 
@@ -80,7 +70,7 @@ def select_build_profile():
                 config.setSelectedBuildProfile(selected_file.name)
 
                 print(f"\nSuccessfully selected Build Profile: {selected_file.name}")
-                clean_build_files()
+                run_scons_clean()
                 print("Please recompile your project for the profile changes to take effect.")
                 input("\nPress Enter to continue...")
                 return

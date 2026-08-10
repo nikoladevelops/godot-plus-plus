@@ -5,7 +5,7 @@ import sys
 from pathlib import Path
 
 from paths import BUILD_PROFILES_DIR, PROJECT_ROOT, get_selected_extension_api_path
-from scons_helpers import clear_screen
+from scons_helpers import clear_screen, run_tool_script
 
 
 def read_file(file_path: Path) -> str:
@@ -219,10 +219,9 @@ def edit_custom_profile(profile_path: Path, api_path: Path):
     write_file(profile_path, json.dumps(profile, indent=4))
 
 
-def print_completion_reminder():
-    print("IMPORTANT NEXT STEP:")
-    print("To make this build profile active, run the 'select_build_profile.py' script.")
-    print("Selecting it there will update your configuration and clean old build files.")
+def select_new_build_profile():
+    input("\nPress Enter to continue...")
+    run_tool_script("select_build_profile.py")
 
 
 def edit_build_profile():
@@ -262,9 +261,10 @@ def edit_build_profile():
         input("\nPress Enter to exit...")
         sys.exit(1)
 
+    print("By re-generating a build profile, you ensure that it works for the current Godot API version, while also keeping only the classes that you truly need")
     print(f"Active Extension API: {api_path.name}\n")
 
-    print("Select Build Profile to Edit/Generate:")
+    print("Re-Generate Build Profile File:")
     print("  [1] 2D Build Profile (2d_build_profile.json)")
     print("  [2] 3D Build Profile (3d_build_profile.json)")
     print("  [3] Custom User Profiles...")
@@ -296,7 +296,7 @@ def edit_build_profile():
         }
         write_file(profile_path, json.dumps(profile, indent=4))
         print(f"\nSuccessfully generated 2d_build_profile.json ({len(disabled_classes)} classes disabled out of {total_classes}).")
-        print_completion_reminder()
+        select_new_build_profile()
 
     elif choice == "2":
         # 3D Build Profile (Disables 2D + extras)
@@ -316,7 +316,7 @@ def edit_build_profile():
         }
         write_file(profile_path, json.dumps(profile, indent=4))
         print(f"\nSuccessfully generated 3d_build_profile.json ({len(disabled_classes)} classes disabled out of {total_classes}).")
-        print_completion_reminder()
+        select_new_build_profile()
 
     elif choice == "3":
         # Dynamic Custom Profiles menu
@@ -337,7 +337,7 @@ def edit_build_profile():
             if 1 <= c_num <= len(custom_files):
                 selected_profile = custom_files[c_num - 1]
                 edit_custom_profile(selected_profile, api_path)
-                print_completion_reminder()
+                select_new_build_profile()
             elif c_num == len(custom_files) + 1:
                 new_name = input("Enter new profile filename (e.g., build_profile.json): ").strip()
                 if not new_name:
@@ -346,7 +346,7 @@ def edit_build_profile():
                 if not new_name.endswith(".json"):
                     new_name += ".json"
                 edit_custom_profile(BUILD_PROFILES_DIR / new_name, api_path)
-                print_completion_reminder()
+                select_new_build_profile()
             else:
                 print("Invalid choice.")
         else:
@@ -354,8 +354,7 @@ def edit_build_profile():
 
     else:
         print("Invalid option selected.")
-
-    input("\nPress Enter to continue...")
+        input("\nPress Enter to continue...")
 
 
 if __name__ == "__main__":

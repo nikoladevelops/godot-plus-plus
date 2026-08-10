@@ -4,6 +4,7 @@ import sys
 from config_manager import config
 from gdextension_file_helper import set_compatibility_minimum
 from paths import GDEXTENSION_APIS_PATH, PROJECT_ROOT
+from scons_helpers import run_scons_clean, run_tool_script
 
 
 def discover_extension_apis():
@@ -100,13 +101,19 @@ def select_godot_target_version():
                 # Update .gdextension compatibility minimum
                 set_compatibility_minimum(selected["version"])
 
+                # Clear all old cache
+                run_scons_clean()
+
+                # Run edit build profile script (since a new godot target version was selected the Godot API will be different)
+                run_tool_script("edit_build_profile.py")
+
                 print(f"\nSuccessfully updated to Godot Version {selected['version']}!")
                 print(f"Active API Path: {selected['relative_path']}")
                 print("Please recompile for changes to take effect..")
                 input("\nPress Enter to continue...")
-                return selected
-
-        print(f"Invalid selection! Please enter a number between 1 and {len(versions)}, or 'q'.")
+                break;
+        else:
+            print(f"Invalid selection! Please enter a number between 1 and {len(versions)}, or 'q'.")
 
 
 if __name__ == "__main__":

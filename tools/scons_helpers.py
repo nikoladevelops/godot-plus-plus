@@ -4,10 +4,19 @@ import sys
 from typing import Literal
 
 from config_manager import config
-from paths import PROJECT_ROOT
+from paths import PROJECT_ROOT, TOOLS_DIR
 
 BuildTarget = Literal["template_debug", "template_release"]
 
+
+def run_tool_script(script_filename):
+    """Run a script from the tools folder and handle errors/output."""
+    script_path = TOOLS_DIR / script_filename
+    result = subprocess.run([sys.executable, script_path], check=False)
+
+    if result.returncode != 0:
+        print(result.stderr or "An error occurred.")
+        input("Press Enter to continue...")
 
 def clear_screen() -> None:
     """Clear the terminal screen cross-platform using subprocess."""
@@ -104,20 +113,13 @@ def run_scons_clean() -> None:
     """
     Executes SCons clean command (scons -c) to remove build artifacts and streams output in real-time.
     """
-    godot_version = config.getGodotVersion()
-
-    if not godot_version:
-        print("Error: No Godot version set in config.json.")
-        input("\nPress Enter to continue...")
-        sys.exit(1)
 
     scons_args = [
         "scons",
         "-c",
-        f"api_version={godot_version}"
     ]
 
-    print(f"Starting SCons clean process (Removing build artifacts for Godot API {godot_version})...")
+    print("Starting SCons clean process")
     print(f"Executing: {' '.join(scons_args)}\n" + "-" * 50 + "\n")
 
     try:
@@ -161,5 +163,3 @@ def run_scons_clean() -> None:
         print("Error: 'scons' command not found. Make sure SCons is installed and available in your PATH.")
     except (subprocess.SubprocessError, OSError) as e:
         print(f"An unexpected execution error occurred: {e}")
-
-    input("\nPress Enter to continue...")
