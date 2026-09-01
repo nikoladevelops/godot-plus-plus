@@ -1,34 +1,51 @@
-import json
-import os
-import re
+from __future__ import annotations
+
 import sys
 from pathlib import Path
 
-from paths import BUILD_PROFILES_DIR, PROJECT_ROOT, get_selected_extension_api_path
-from scons_helpers import clear_screen, run_tool_script
+# Bootstrap so absolute imports work whether run as `python tools/foo.py` or `python -m tools.foo`
+if str(Path(__file__).resolve().parent.parent) not in sys.path:
+    sys.path.insert(0, str(Path(__file__).resolve().parent.parent))
+if str(Path(__file__).resolve().parent) not in sys.path:
+    sys.path.insert(0, str(Path(__file__).resolve().parent))
+
+import json
+import os
+import re
+from collections.abc import Mapping
+from typing import Any
+
+from tools.paths import (
+    BUILD_PROFILES_DIR,
+    PROJECT_ROOT,
+    get_selected_extension_api_path,
+)
+from tools.scons_helpers import clear_screen, run_tool_script
 
 
 def read_file(file_path: Path) -> str:
     try:
         return file_path.read_text(encoding="utf-8")
-    except Exception as e:
+    except OSError as e:
         print(f"Error reading file {file_path}: {e}")
+        print("Please check the file exists and you have read permission.")
         sys.exit(1)
 
 
 def write_file(file_path: Path, content: str) -> None:
     try:
         file_path.write_text(content, encoding="utf-8")
-    except Exception as e:
+    except OSError as e:
         print(f"Error writing file {file_path}: {e}")
+        print("Please check the file path and write permission.")
         sys.exit(1)
 
 
-def _build_inheritance_map(api: dict) -> dict[str, str]:
-    return {cls.get("name"): cls.get("inherits") for cls in api.get("classes", [])}
+def _build_inheritance_map(api: dict[str, Any]) -> dict[str, str | None]:
+    return {str(cls.get("name", "")): cls.get("inherits") for cls in api.get("classes", []) if isinstance(cls, dict)}
 
 
-def _inherits_from(class_name: str, base_name: str, class_map: dict[str, str]) -> bool:
+def _inherits_from(class_name: str, base_name: str, class_map: Mapping[str, str | None]) -> bool:
     seen = set()
     current = class_name
     while current and current not in seen:
@@ -42,7 +59,7 @@ def _inherits_from(class_name: str, base_name: str, class_map: dict[str, str]) -
     return False
 
 
-def get_all_ancestors(class_name: str, class_map: dict[str, str]) -> set[str]:
+def get_all_ancestors(class_name: str, class_map: Mapping[str, str | None]) -> set[str]:
     ancestors = set()
     current = class_map.get(class_name)
     seen = set()
@@ -87,7 +104,12 @@ def classify_api(api_path: Path) -> tuple[dict[str, set[str]], int]:
             buckets["navigation"].add(name)
         if _inherits_from(name, "EditorPlugin", class_map) or "editor" in lname:
             buckets["editor"].add(name)
-        if "animation" in lname or _inherits_from(name, "AnimationPlayer", class_map) or _inherits_from(name, "AnimationMixer", class_map) or _inherits_from(name, "AnimationTree", class_map):
+        if (
+            "animation" in lname
+            or _inherits_from(name, "AnimationPlayer", class_map)
+            or _inherits_from(name, "AnimationMixer", class_map)
+            or _inherits_from(name, "AnimationTree", class_map)
+        ):
             buckets["animation"].add(name)
         if _inherits_from(name, "Control", class_map):
             buckets["ui"].add(name)
@@ -172,9 +194,13 @@ def prompt_extra_disables() -> dict[str, bool]:
     return extras
 
 
-def edit_custom_profile(profile_path: Path, api_path: Path):
+def edit_custom_profile(profile_path: Path, api_path: Path) -> None:
     """Applies code auto-detection or creates a default template for any custom profile file."""
-    auto_detect = input(f"\nShould I detect which classes you are using in your source files and header files for '{profile_path.name}'? (y/n): ").strip().lower() == "y"
+    prompt = (  # noqa: E501
+        f"\nShould I detect which classes you are using in your source "
+        f"files and header files for '{profile_path.name}'? (y/n): "
+    )
+    auto_detect = input(prompt).strip().lower() == "y"
 
     if auto_detect:
         print(f"\nScanning C++ source files and headers for '{profile_path.name}'... please wait...")
@@ -205,26 +231,34 @@ def edit_custom_profile(profile_path: Path, api_path: Path):
                 "type": "feature_profile",
                 "enabled_classes": all_needed,
             }
-            print(f"\nCustom Profile generated: {len(all_needed)} classes enabled (including inheritance dependencies).")
+            print(f"\nCustom Profile generated: {len(all_needed)} classes enabled (including inheritance dependencies).")  # noqa: E501
     else:
         profile = {
-            "_": "Default custom build profile with minimal base classes. Edit this file to manually specify 'enabled_classes' or 'disabled_classes'.",
+            "_": (
+                "Default custom build profile with minimal base classes. "
+                "Edit this file to manually specify 'enabled_classes'"
+                " or 'disabled_classes'."
+            ),
             "type": "feature_profile",
             "enabled_classes": ["Object", "RefCounted"],
         }
         print(f"\nCreated default custom '{profile_path.name}'.")
         print("Note: The build profile is currently minimal (only Object and RefCounted are enabled).")
-        print("You should now open the file in your text editor and populate either 'enabled_classes' (whitelist) or 'disabled_classes' (blacklist) according to your project needs.")
+        print(  # noqa: E501
+            "You should now open the file in your text editor and populate "
+            "either 'enabled_classes' (whitelist) or 'disabled_classes' "
+            "(blacklist) according to your project needs."
+        )
 
     write_file(profile_path, json.dumps(profile, indent=4))
 
 
-def select_new_build_profile():
-    input("\nPress Enter to continue...")
+def select_new_build_profile() -> None:
+    _ = input("\nPress Enter to continue...")
     run_tool_script("select_build_profile.py")
 
 
-def edit_build_profile():
+def edit_build_profile() -> None:
     clear_screen()
     print("Edit Build Profile Tool by @realNikich\n")
 
@@ -258,10 +292,14 @@ def edit_build_profile():
     if not api_path.exists():
         print(f"Error: Target Extension API JSON not found at {api_path}")
         print("Please set a valid Godot target version first.")
-        input("\nPress Enter to exit...")
+        _ = input("\nPress Enter to exit...")
         sys.exit(1)
 
-    print("By re-generating a build profile, you ensure that it works for the current Godot API version, while also keeping only the classes that you truly need")
+    print(  # noqa: E501
+        "By re-generating a build profile, you ensure that it works "
+        "for the current Godot API version, while also keeping only "
+        "the classes that you truly need"
+    )
     print(f"Active Extension API: {api_path.name}\n")
 
     print("Re-Generate Build Profile File:")
@@ -295,7 +333,10 @@ def edit_build_profile():
             "disabled_classes": disabled_classes,
         }
         write_file(profile_path, json.dumps(profile, indent=4))
-        print(f"\nSuccessfully generated 2d_build_profile.json ({len(disabled_classes)} classes disabled out of {total_classes}).")
+        print(  # noqa: E501
+            f"\nSuccessfully generated 2d_build_profile.json "
+            f"({len(disabled_classes)} classes disabled out of {total_classes})."
+        )
         select_new_build_profile()
 
     elif choice == "2":
@@ -315,7 +356,10 @@ def edit_build_profile():
             "disabled_classes": disabled_classes,
         }
         write_file(profile_path, json.dumps(profile, indent=4))
-        print(f"\nSuccessfully generated 3d_build_profile.json ({len(disabled_classes)} classes disabled out of {total_classes}).")
+        print(  # noqa: E501
+            f"\nSuccessfully generated 3d_build_profile.json "
+            f"({len(disabled_classes)} classes disabled out of {total_classes})."
+        )
         select_new_build_profile()
 
     elif choice == "3":
@@ -343,9 +387,20 @@ def edit_build_profile():
                 if not new_name:
                     print("Invalid filename.")
                     return
+                # Sanitize: only allow single filename, no paths, no backslashes (prevents \home\ weird file bug)
+                if "/" in new_name or "\\" in new_name or ".." in new_name:
+                    print("Invalid filename: must be a plain file name without path separators.")
+                    return
                 if not new_name.endswith(".json"):
                     new_name += ".json"
-                edit_custom_profile(BUILD_PROFILES_DIR / new_name, api_path)
+                # Final safety: resolve and ensure still inside BUILD_PROFILES_DIR
+                candidate = (BUILD_PROFILES_DIR / new_name).resolve()
+                try:
+                    candidate.relative_to(BUILD_PROFILES_DIR.resolve())
+                except ValueError:
+                    print("Invalid filename: resolves outside build_profiles/.")
+                    return
+                edit_custom_profile(candidate, api_path)
                 select_new_build_profile()
             else:
                 print("Invalid choice.")
@@ -354,7 +409,7 @@ def edit_build_profile():
 
     else:
         print("Invalid option selected.")
-        input("\nPress Enter to continue...")
+        _ = input("\nPress Enter to continue...")
 
 
 if __name__ == "__main__":

@@ -1,12 +1,22 @@
+from __future__ import annotations
+
 import sys
+from pathlib import Path
 
-from config_manager import config
-from gdextension_file_helper import set_reloadable
-from paths import get_gdextension_file_path
-from scons_helpers import clear_screen
+# Bootstrap so absolute imports work whether run as `python tools/foo.py` or `python -m tools.foo`
+if str(Path(__file__).resolve().parent.parent) not in sys.path:
+    sys.path.insert(0, str(Path(__file__).resolve().parent.parent))
+if str(Path(__file__).resolve().parent) not in sys.path:
+    sys.path.insert(0, str(Path(__file__).resolve().parent))
 
 
-def display_info_and_recommendations():
+from tools.config_manager import config
+from tools.gdextension_file_helper import set_reloadable
+from tools.paths import get_gdextension_file_path
+from tools.scons_helpers import clear_screen
+
+
+def display_info_and_recommendations() -> None:
     print("-" * 75)
     print("ABOUT GDEXTENSION HOT RELOADING (reloadable = true / false):")
     print("-" * 75)
@@ -33,7 +43,7 @@ def display_info_and_recommendations():
     print("-" * 75 + "\n")
 
 
-def toggle_reloadable():
+def toggle_reloadable() -> None:
     clear_screen()
     print("GDExtension Reloadable Switcher Tool by @realNikich\n")
 
@@ -43,7 +53,7 @@ def toggle_reloadable():
     manifest_path = get_gdextension_file_path()
 
     print(f"Target Manifest: {manifest_path.name}")
-    print(f"Current Hot Reload Status: {'ENABLED (reloadable = true)' if current_status else 'DISABLED (reloadable = false)'}\n")
+    print(f"Current Hot Reload Status: {'ENABLED (reloadable = true)' if current_status else 'DISABLED (reloadable = false)'}\n")  # noqa: E501
 
     print("Options:")
     print("  [1] Enable Hot Reloading (reloadable = true)")
@@ -65,16 +75,21 @@ def toggle_reloadable():
         sys.exit(1)
 
     # Save to config.json (JSON native boolean) and .gdextension manifest (reloadable = true/false)
-    config.setReloadable(new_status)
+    previous_status = config.getReloadable()
     try:
         set_reloadable(new_status)
+        config.setReloadable(new_status)
         status_str = "ENABLED (reloadable = true)" if new_status else "DISABLED (reloadable = false)"
         print(f"\nSuccessfully set Hot Reloading to: {status_str}")
         print(f"Updated tools/config.json and {manifest_path.name}.")
-    except Exception as e:
-        print(f"\nError updating .gdextension file: {e}")
+    except OSError as e:
+        try:
+            config.setReloadable(previous_status)
+        except OSError:
+            pass
+        print(f"\nError updating .gdextension file: {e}. Check the file is not locked and you have write permission.")
 
-    input("\nPress Enter to continue...")
+    _ = input("\nPress Enter to continue...")
 
 
 if __name__ == "__main__":

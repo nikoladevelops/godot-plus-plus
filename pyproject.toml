@@ -1,0 +1,21 @@
+[tool.basedpyright]
+typeCheckingMode = "strict"
+reportMissingTypeStubs = false
+reportUnknownParameterType = true
+reportUnknownVariableType = false
+reportMissingTypeArgument = true
+reportUnknownMemberType = false
+reportUnknownArgumentType = false
+reportUnknownLambdaType = false
+reportGeneralTypeIssues = false
+exclude = ["godot-cpp"]
+ignore = ["godot-cpp"]
+
+[tool.ruff]
+target-version = "py314"
+line-length = 120
+exclude = ["godot-cpp"]
+
+[tool.ruff.lint]
+select = ["E", "F", "BLE", "TID"]
+ignore = []

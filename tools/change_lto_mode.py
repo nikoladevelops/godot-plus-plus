@@ -1,15 +1,25 @@
+from __future__ import annotations
+
 import sys
+from pathlib import Path
 
-from config_manager import config
-from scons_helpers import clear_screen
+# Bootstrap so absolute imports work whether run as `python tools/foo.py` or `python -m tools.foo`
+if str(Path(__file__).resolve().parent.parent) not in sys.path:
+    sys.path.insert(0, str(Path(__file__).resolve().parent.parent))
+if str(Path(__file__).resolve().parent) not in sys.path:
+    sys.path.insert(0, str(Path(__file__).resolve().parent))
 
 
-def change_lto_setting():
+from tools.config_manager import config
+from tools.scons_helpers import clear_screen
+
+
+def change_lto_setting() -> None:
     clear_screen()
     print("Configure Link Time Optimization (LTO) Tool by @realNikich")
 
-    print("Warning - This affects only the local release build, NOT the github actions workflow (for that check inside .github/workflows)")
-    print("Warning - Enabling LTO optimization might cause issues on different platforms. If compilation fails all of a sudden disable it.")
+    print("Warning - This affects only the local release build, NOT the github actions workflow (for that check inside .github/workflows)")  # noqa: E501
+    print("Warning - Enabling LTO optimization might cause issues on different platforms. If compilation fails all of a sudden disable it.")  # noqa: E501
 
     current_lto = config.getLtoMode()
     print(f"Current LTO Setting: {current_lto}\n")
@@ -42,7 +52,7 @@ def change_lto_setting():
                 config.setLtoMode(selected_mode)
 
                 print(f"\nSuccessfully set LTO Mode to '{selected_mode}'!")
-                input("\nPress Enter to continue...")
+                _ = input("\nPress Enter to continue...")
                 return
 
         print(f"Invalid selection! Please enter a number between 1 and {len(options)}, or 'q'.")

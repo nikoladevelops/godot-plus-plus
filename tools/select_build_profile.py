@@ -1,11 +1,21 @@
+from __future__ import annotations
+
 import sys
+from pathlib import Path
 
-from config_manager import config
-from paths import BUILD_PROFILES_DIR
-from scons_helpers import clear_screen, run_scons_clean
+# Bootstrap so absolute imports work whether run as `python tools/foo.py` or `python -m tools.foo`
+if str(Path(__file__).resolve().parent.parent) not in sys.path:
+    sys.path.insert(0, str(Path(__file__).resolve().parent.parent))
+if str(Path(__file__).resolve().parent) not in sys.path:
+    sys.path.insert(0, str(Path(__file__).resolve().parent))
 
 
-def select_build_profile():
+from tools.config_manager import config
+from tools.paths import BUILD_PROFILES_DIR
+from tools.scons_helpers import clear_screen, run_scons_clean
+
+
+def select_build_profile() -> None:
     clear_screen()
     print("Select Build Profile Tool by @realNikich\n")
 
@@ -60,7 +70,7 @@ def select_build_profile():
             config.setSelectedBuildProfile("none")
             print("\nBuild Profile set to: None (all classes enabled).")
             run_scons_clean()
-            input("\nPress Enter to continue...")
+            _ = input("\nPress Enter to continue...")
             return
 
         if user_input.isdigit():
@@ -72,7 +82,7 @@ def select_build_profile():
                 print(f"\nSuccessfully selected Build Profile: {selected_file.name}")
                 run_scons_clean()
                 print("Please recompile your project for the profile changes to take effect.")
-                input("\nPress Enter to continue...")
+                _ = input("\nPress Enter to continue...")
                 return
 
         print(f"Invalid selection! Enter a number between 0 and {len(profiles)}, or 'q'.")

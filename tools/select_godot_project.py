@@ -1,12 +1,21 @@
+from __future__ import annotations
+
 import sys
 from pathlib import Path
 
-from config_manager import config
-from paths import PROJECT_ROOT
-from scons_helpers import clear_screen
+# Bootstrap so absolute imports work whether run as `python tools/foo.py` or `python -m tools.foo`
+if str(Path(__file__).resolve().parent.parent) not in sys.path:
+    sys.path.insert(0, str(Path(__file__).resolve().parent.parent))
+if str(Path(__file__).resolve().parent) not in sys.path:
+    sys.path.insert(0, str(Path(__file__).resolve().parent))
 
 
-def display_info():
+from tools.config_manager import config
+from tools.paths import PROJECT_ROOT, normalize_user_path
+from tools.scons_helpers import clear_screen
+
+
+def display_info() -> None:
     print("-" * 75)
     print("ABOUT TARGET GODOT PROJECT SWITCHER:")
     print("-" * 75)
@@ -29,14 +38,8 @@ def is_valid_godot_project(path: Path) -> bool:
 
 
 def normalize_path(user_input: str) -> Path | None:
-    """Sanitizes and converts raw path input into an absolute Path object."""
-    cleaned = user_input.strip().strip('"').strip("'")
-    if not cleaned:
-        return None
-    try:
-        return Path(cleaned).expanduser().resolve()
-    except (OSError, ValueError, RuntimeError):
-        return None
+    """Backward-compat wrapper — delegates to paths.normalize_user_path (single source)."""
+    return normalize_user_path(user_input)
 
 
 def discover_godot_projects() -> list[Path]:
@@ -54,7 +57,7 @@ def discover_godot_projects() -> list[Path]:
     return sorted(godot_projects, key=lambda p: p.name.lower())
 
 
-def select_godot_project():
+def select_godot_project() -> None:
     clear_screen()
     print("Select Godot Project Folder Tool by @realNikich\n")
 
@@ -91,7 +94,7 @@ def select_godot_project():
 
             if not custom_path or not is_valid_godot_project(custom_path):
                 print("\nError: The provided path is either invalid or does not contain a 'project.godot' file!")
-                input("Press Enter to try again...")
+                _ = input("Press Enter to try again...")
                 clear_screen()
                 display_info()
                 continue
@@ -102,20 +105,20 @@ def select_godot_project():
 
             print(f"\nSuccessfully set active Godot project path to: '{final_path_str}'")
             print("SCons will now copy compiled binaries directly into this external project folder.")
-            input("\nPress Enter to continue...")
+            _ = input("\nPress Enter to continue...")
             return
 
         if choice.isdigit():
             idx = int(choice)
             if 1 <= idx <= len(discovered_projects):
                 selected_dir = discovered_projects[idx - 1]
-                # Save either full path or name depending on standard usage; storing full absolute path here for robust support
+                # Save either full path or name depending on standard usage; storing full absolute path here for robust support  # noqa: E501
                 final_path_str = str(selected_dir)
                 config.setGodotProjectFolder(final_path_str)
 
                 print(f"\nSuccessfully set active Godot project folder to: '{final_path_str}'")
                 print("SCons will now copy compiled binaries directly into this project folder.")
-                input("\nPress Enter to continue...")
+                _ = input("\nPress Enter to continue...")
                 return
 
         print("Invalid selection! Enter a valid number, 'p', or 'q'.")

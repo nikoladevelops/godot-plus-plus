@@ -1,10 +1,20 @@
-import subprocess
+from __future__ import annotations
+
 import sys
+from pathlib import Path
 
-from paths import PROJECT_ROOT, SUBMODULE_PATH
+# Bootstrap so absolute imports work whether run as `python tools/foo.py` or `python -m tools.foo`
+if str(Path(__file__).resolve().parent.parent) not in sys.path:
+    sys.path.insert(0, str(Path(__file__).resolve().parent.parent))
+if str(Path(__file__).resolve().parent) not in sys.path:
+    sys.path.insert(0, str(Path(__file__).resolve().parent))
+
+import subprocess
+
+from tools.paths import PROJECT_ROOT, SUBMODULE_PATH
 
 
-def run_git_command(args, cwd=None):
+def run_git_command(args: list[str], cwd: Path | str | None = None) -> tuple[bool, str]:
     """Run a Git command and return (success, output)."""
     # Convert Path objects to string if passed to cwd
     if cwd:

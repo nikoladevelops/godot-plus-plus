@@ -1,7 +1,17 @@
-import sys
+from __future__ import annotations
 
-from config_manager import config
-from scons_helpers import clear_screen
+import sys
+from pathlib import Path
+
+# Bootstrap so absolute imports work whether run as `python tools/foo.py` or `python -m tools.foo`
+if str(Path(__file__).resolve().parent.parent) not in sys.path:
+    sys.path.insert(0, str(Path(__file__).resolve().parent.parent))
+if str(Path(__file__).resolve().parent) not in sys.path:
+    sys.path.insert(0, str(Path(__file__).resolve().parent))
+
+
+from tools.config_manager import config
+from tools.scons_helpers import clear_screen
 
 if __name__ == "__main__":
     clear_screen()
@@ -49,10 +59,10 @@ if __name__ == "__main__":
         print("\n[SUCCESS] Debug symbols DISABLED in config.json.")
     else:
         print("\nInvalid choice. Operation cancelled.")
-        input("\nPress Enter to continue...")
+        _ = input("\nPress Enter to continue...")
         sys.exit(0)
 
     print("\n" + "=" * 65)
     print("You MUST recompile your plugin for these changes to take effect.")
     print("=" * 65)
-    input("\nPress Enter to exit...")
+    _ = input("\nPress Enter to exit...")

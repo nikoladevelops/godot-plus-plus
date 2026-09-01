@@ -1,10 +1,13 @@
 # GDExtension Setup and Template Manager by @realNikich
+from __future__ import annotations
+
 import sys
+from typing import Final
 
 from tools.config_manager import config
-from tools.scons_helpers import clear_screen, run_tool_script
+from tools.scons_helpers import clear_screen, pause, run_tool_script
 
-SUBMENUS = {
+SUBMENUS: Final[dict[str, dict[str, object]]] = {
     "1": {
         "title": "Godot Engine & Version Settings",
         "items": [
@@ -59,7 +62,7 @@ def get_active_path_version() -> str:
     return "Unknown"
 
 
-def display_dashboard_header():
+def display_dashboard_header() -> None:
     """Display comprehensive status header showing all configuration fields from config.json."""
     plugin_name = config.getPluginName()
     godot_version = config.getGodotVersion()
@@ -90,7 +93,7 @@ def display_dashboard_header():
     print("=" * 65 + "\n")
 
 
-def run_quick_setup_wizard():
+def run_quick_setup_wizard() -> None:
     """Walks the user through the standard first-time setup sequence step-by-step."""
     clear_screen()
     print("=" * 65)
@@ -105,7 +108,11 @@ def run_quick_setup_wizard():
     print("  6. Compile your first Debug build")
     print("-" * 65)
 
-    proceed = input("Do you want to start the quick setup wizard now? (y/q to quit): ").strip().lower()
+    try:
+        proceed = input("Do you want to start the quick setup wizard now? (y/q to quit): ").strip().lower()
+    except (EOFError, KeyboardInterrupt):
+        print("\nWizard cancelled.")
+        return
     if proceed == 'q':
         return
 
@@ -128,10 +135,10 @@ def run_quick_setup_wizard():
     print(" Quick Setup Wizard Completed Successfully!")
     print("Your C++ GDExtension template is fully configured and ready for development.")
     print("=" * 65)
-    input("Press Enter to return to the main menu...")
+    pause("Press Enter to return to the main menu...")
 
 
-def display_main_menu():
+def display_main_menu() -> None:
     """Display the main submenu categories and quick setup option."""
     display_dashboard_header()
     print("Main Menu Categories:")
@@ -141,22 +148,28 @@ def display_main_menu():
     print("\nEnter category number, or 'q' to quit: ")
 
 
-def display_submenu(category_key):
+def display_submenu(category_key: str) -> None:
     """Display options inside a specific submenu category."""
-    submenu = SUBMENUS[category_key]
+    submenu: dict[str, object] = SUBMENUS[category_key]  # type: ignore[assignment]
+
     while True:
         clear_screen()
         display_dashboard_header()
+
         print(f"Submenu: {submenu['title']}")
         print("-" * 50)
 
-        items = submenu["items"]
+        items: list[tuple[str, str]] = submenu["items"]  # type: ignore[assignment]
         for idx, (title, _) in enumerate(items, start=1):
             print(f"  {idx}. {title}")
 
         print("  q. Back to Main Menu")
         print("-" * 50)
-        user_input = input("Select an option: ").strip().lower()
+
+        try:
+            user_input = input("Select an option: ").strip().lower()
+        except (EOFError, KeyboardInterrupt):
+            break
 
         if user_input == "q":
             break
@@ -166,16 +179,21 @@ def display_submenu(category_key):
             run_tool_script(script_filename)
         else:
             print("Invalid choice. Please enter a valid number or 'q' to go back.")
-            input("Press Enter to continue...")
+            pause()
 
 
-def main():
+def main() -> None:
     """Main loop to display categories and handle user input."""
     while True:
         config.reload()
         clear_screen()
         display_main_menu()
-        user_input = input().strip().lower()
+
+        try:
+            user_input = input().strip().lower()
+        except (EOFError, KeyboardInterrupt):
+            print("\nQuitting...")
+            sys.exit(0)
 
         if user_input == "q":
             print("Quitting...")
@@ -187,12 +205,12 @@ def main():
             display_submenu(user_input)
         else:
             print("Invalid category selection. Please try again.")
-            input("Press Enter to continue...")
+            pause()
 
 
 if __name__ == "__main__":
     try:
         main()
-    except KeyboardInterrupt:
+    except (KeyboardInterrupt, EOFError):
         print("\nQuitting...")
         sys.exit(0)

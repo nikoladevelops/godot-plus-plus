@@ -1,13 +1,24 @@
-import json
+from __future__ import annotations
+
 import sys
+from pathlib import Path
 
-from config_manager import config
-from gdextension_file_helper import set_compatibility_minimum
-from paths import GDEXTENSION_APIS_PATH, PROJECT_ROOT
-from scons_helpers import run_scons_clean, run_tool_script
+# Bootstrap so absolute imports work whether run as `python tools/foo.py` or `python -m tools.foo`
+if str(Path(__file__).resolve().parent.parent) not in sys.path:
+    sys.path.insert(0, str(Path(__file__).resolve().parent.parent))
+if str(Path(__file__).resolve().parent) not in sys.path:
+    sys.path.insert(0, str(Path(__file__).resolve().parent))
+
+import json
+from typing import Any
+
+from tools.config_manager import config
+from tools.gdextension_file_helper import set_compatibility_minimum
+from tools.paths import GDEXTENSION_APIS_PATH, PROJECT_ROOT
+from tools.scons_helpers import run_scons_clean, run_tool_script
 
 
-def discover_extension_apis():
+def discover_extension_apis() -> list[dict[str, Any]]:
     """
     Scans GDEXTENSION_APIS_PATH for files starting with 'extension_api' and ending in '.json'.
     Reads each file to extract 'version_major' and 'version_minor'.
@@ -62,7 +73,7 @@ def discover_extension_apis():
     return available_versions
 
 
-def select_godot_target_version():
+def select_godot_target_version() -> None:
     print("Tool For Switching Godot Target Version By @realNikich\n")
 
     versions = discover_extension_apis()
@@ -80,7 +91,7 @@ def select_godot_target_version():
         print(f"  [{idx}] Godot {item['version']} ({item['file_name']}){is_current}")
 
     print("  [q] Quit without changing")
-    print("\nWarning: After changing the Godot target version, you need to recompile your code for the changes to take effect.\n")
+    print("\nWarning: After changing the Godot target version, you need to recompile your code for the changes to take effect.\n")  # noqa: E501
 
     while True:
         user_input = input("\nSelect a version number or 'q' to quit: ").strip().lower()
@@ -104,14 +115,14 @@ def select_godot_target_version():
                 # Clear all old cache
                 run_scons_clean()
 
-                # Run edit build profile script (since a new godot target version was selected the Godot API will be different)
+                # Run edit build profile script (since a new godot target version was selected the Godot API will be different)  # noqa: E501
                 run_tool_script("edit_build_profile.py")
 
                 print(f"\nSuccessfully updated to Godot Version {selected['version']}!")
                 print(f"Active API Path: {selected['relative_path']}")
                 print("Please recompile for changes to take effect..")
-                input("\nPress Enter to continue...")
-                break;
+                _ = input("\nPress Enter to continue...")
+                break
         else:
             print(f"Invalid selection! Please enter a number between 1 and {len(versions)}, or 'q'.")
 

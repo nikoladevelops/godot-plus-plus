@@ -1,3 +1,6 @@
+from __future__ import annotations
+
+import platform as _platform
 from pathlib import Path
 
 # Absolute path to the directory containing this script
@@ -31,12 +34,35 @@ DOCS_SOURCE_DIR = PROJECT_ROOT / "doc_classes"
 SRC_DIR = PROJECT_ROOT / "src"
 
 
+def normalize_user_path(user_input: str) -> Path | None:
+    """
+    Sanitize raw path input across Windows, macOS and Linux.
+
+    Handles pasted paths with quotes, dragged folders with escaped spaces,
+    tilde expansion and symlink resolution. Returns None for empty input.
+
+    Used by Godot path and project selectors so behavior stays consistent.
+    """
+    cleaned = user_input.strip().strip('"').strip("'")
+    if not cleaned:
+        return None
+
+    if _platform.system() != "Windows":
+        cleaned = cleaned.replace("\\ ", " ")
+
+    try:
+        return Path(cleaned).expanduser().resolve()
+    except (OSError, ValueError, RuntimeError):
+        return None
+
+
 def get_godot_project_dir() -> Path:
     """
     Returns the absolute Path to the active target Godot project directory
     (supports both absolute paths for external projects and relative workspace paths).
     """
-    from config_manager import config
+    from tools.config_manager import config
+
     project_str = config.getGodotProjectFolder()
 
     if not project_str:
@@ -44,24 +70,31 @@ def get_godot_project_dir() -> Path:
 
     path_obj = Path(project_str)
     if path_obj.is_absolute():
-        return path_obj
+        return path_obj.resolve()
 
-    workspace_resolved = PROJECT_ROOT / path_obj
+    # Relative path: always resolve against PROJECT_ROOT, not current working directory
+    workspace_resolved = (PROJECT_ROOT / path_obj).resolve()
+
+    # If that location exists, use it (standard case: test_project inside workspace)
     if workspace_resolved.exists():
         return workspace_resolved
 
-    return path_obj.resolve()
+    # Fallback: return the resolved workspace path even if it does not exist yet
+    # so validation can correctly report missing project.godot
+    return workspace_resolved
 
 
 def get_plugin_dir() -> Path:
     """Returns the absolute Path to the plugin folder inside the selected active Godot project."""
-    from config_manager import config
+    from tools.config_manager import config
+
     return get_godot_project_dir() / "addons" / config.getPluginName()
 
 
 def get_gdextension_file_path() -> Path:
     """Returns the absolute Path to the master source .gdextension manifest file in the workspace root template."""
-    from config_manager import config
+    from tools.config_manager import config
+
     plugin_name = config.getPluginName()
     return PROJECT_ROOT / f"{plugin_name}.gdextension"
 
@@ -71,9 +104,13 @@ def get_selected_extension_api_path() -> Path:
     Returns the absolute Path to the active extension_api JSON file by combining
     PROJECT_ROOT with the relative path stored in config.
     """
-    from config_manager import config
+    from tools.config_manager import config
+
     rel_path_str = config.getExtensionApiPath()
     if rel_path_str:
-        return PROJECT_ROOT / rel_path_str
+        rel_path = Path(rel_path_str)
+        if rel_path.is_absolute():
+            return rel_path
+        return PROJECT_ROOT / rel_path
 
     return GDEXTENSION_APIS_PATH / "extension_api.json"

@@ -1,3 +1,16 @@
+from __future__ import annotations
+
+import sys
+from pathlib import Path
+from typing import Any
+
+# Bootstrap so absolute imports work whether run as module or via SConstruct
+if str(Path(__file__).resolve().parent.parent) not in sys.path:
+    sys.path.insert(0, str(Path(__file__).resolve().parent.parent))
+if str(Path(__file__).resolve().parent) not in sys.path:
+    sys.path.insert(0, str(Path(__file__).resolve().parent))
+
+
 def generate_info_plist(libname: str, platform: str, target: str, precision: str, bundle_id_prefix: str) -> str:
     """Generates the Info.plist content XML string for macOS frameworks or iOS xcframeworks."""
     if not target:
@@ -62,13 +75,15 @@ def generate_info_plist(libname: str, platform: str, target: str, precision: str
 </plist>"""
 
 
-def write_info_plist(target_nodes, source_nodes, env, plist_content: str) -> None:
+def write_info_plist(target_nodes: Any, source_nodes: Any, env: Any, plist_content: str) -> None:
     """SCons command callback wrapper to write the plist content to disk."""
+    _ = source_nodes
+    _ = env
     with open(target_nodes[0].abspath, 'w', encoding="utf-8") as f:
-        f.write(plist_content)
+        _ = f.write(plist_content)
 
 
-def build_apple_framework(env, libname: str, lib_filename: str, precision: str, bundle_id_prefix: str, sources: list, build_target: str) -> tuple:
+def build_apple_framework(env: Any, libname: str, lib_filename: str, precision: str, bundle_id_prefix: str, sources: list[Any], build_target: str) -> tuple[Any, Any]:  # noqa: E501
     """
     Encapsulates all complex macOS framework and iOS xcframework command chaining,
     keeping SConstruct clean.
@@ -102,7 +117,7 @@ def build_apple_framework(env, libname: str, lib_filename: str, precision: str, 
             temp_lib,
             [
                 f"mkdir -p {framework_dir}",
-                f"cp $SOURCE $TARGET",
+                "cp $SOURCE $TARGET",
                 f"rm -f bin/{platform}/{lib_filename}"
             ]
         )
@@ -130,7 +145,7 @@ def build_apple_framework(env, libname: str, lib_filename: str, precision: str, 
             temp_lib,
             [
                 f"mkdir -p {temp_fw_dir}",
-                f"cp $SOURCE $TARGET"
+                "cp $SOURCE $TARGET"
             ]
         )
         env.Depends(temp_framework, plist_file)

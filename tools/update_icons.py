@@ -1,16 +1,25 @@
-import shutil
+from __future__ import annotations
+
 import sys
 from pathlib import Path
 
-from config_manager import config
-from gdextension_file_helper import update_icons_in_gdextension
-from paths import (
+# Bootstrap so absolute imports work whether run as `python tools/foo.py` or `python -m tools.foo`
+if str(Path(__file__).resolve().parent.parent) not in sys.path:
+    sys.path.insert(0, str(Path(__file__).resolve().parent.parent))
+if str(Path(__file__).resolve().parent) not in sys.path:
+    sys.path.insert(0, str(Path(__file__).resolve().parent))
+
+import shutil
+
+from tools.config_manager import config
+from tools.gdextension_file_helper import update_icons_in_gdextension
+from tools.paths import (
     ICONS_SOURCE_DIR,
     get_gdextension_file_path,
     get_godot_project_dir,
     get_plugin_dir,
 )
-from scons_helpers import clear_screen
+from tools.scons_helpers import clear_screen
 
 
 def print_instructions_and_prompt(project_folder: str, plugin_name: str) -> bool:
@@ -47,7 +56,7 @@ def print_instructions_and_prompt(project_folder: str, plugin_name: str) -> bool
             print("Invalid input. Please enter 'y' to proceed or 'q' to quit.")
 
 
-def clean_destination_directory(project_icons_dest: Path, godot_imported_dir: Path):
+def clean_destination_directory(project_icons_dest: Path, godot_imported_dir: Path) -> None:
     """
     Completely wipes the destination icons directory (including old .import files)
     and removes matching imported cache files in .godot/imported/.
@@ -73,7 +82,7 @@ def clean_destination_directory(project_icons_dest: Path, godot_imported_dir: Pa
                     pass
 
 
-def update_gdextension_icons():
+def update_gdextension_icons() -> None:
     plugin_name = config.getPluginName()
     project_folder = config.getGodotProjectFolder()
 
@@ -91,21 +100,21 @@ def update_gdextension_icons():
         ICONS_SOURCE_DIR.mkdir(parents=True, exist_ok=True)
         print(f"\nCreated source directory: {ICONS_SOURCE_DIR}")
         print("Place your 16x16 .svg node icons there and run this script again.")
-        input("\nPress Enter to continue...")
+        _ = input("\nPress Enter to continue...")
         return
 
     svg_files = list(ICONS_SOURCE_DIR.glob("*.svg"))
     if not svg_files:
         print(f"\nNo .svg icons found in: {ICONS_SOURCE_DIR}")
         print("Please place your node SVG files inside the folder and try again.")
-        input("\nPress Enter to continue...")
+        _ = input("\nPress Enter to continue...")
         return
 
     if not gdextension_file.exists():
         print("\nError: Could not locate GDExtension file at:")
         print(f"  {gdextension_file}")
         print("Check your 'pluginName' and 'godotProjectFolder' settings in config.json.")
-        input("\nPress Enter to continue...")
+        _ = input("\nPress Enter to continue...")
         return
 
     # Wipe destination icons folder & import cache
@@ -136,4 +145,4 @@ if __name__ == "__main__":
         print("\nOperation cancelled by user.")
         sys.exit(0)
 
-    input("\nPress Enter to continue...")
+    _ = input("\nPress Enter to continue...")

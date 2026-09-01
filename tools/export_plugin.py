@@ -1,9 +1,19 @@
-import shutil
-import sys
+from __future__ import annotations
 
-from config_manager import config
-from paths import ICONS_SOURCE_DIR, PROJECT_ROOT, get_gdextension_file_path
-from scons_helpers import clear_screen
+import sys
+from pathlib import Path
+
+# Bootstrap so absolute imports work whether run as `python tools/foo.py` or `python -m tools.foo`
+if str(Path(__file__).resolve().parent.parent) not in sys.path:
+    sys.path.insert(0, str(Path(__file__).resolve().parent.parent))
+if str(Path(__file__).resolve().parent) not in sys.path:
+    sys.path.insert(0, str(Path(__file__).resolve().parent))
+
+import shutil
+
+from tools.config_manager import config
+from tools.paths import ICONS_SOURCE_DIR, PROJECT_ROOT, get_gdextension_file_path
+from tools.scons_helpers import clear_screen
 
 
 def package_plugin_release() -> None:
@@ -21,8 +31,8 @@ def package_plugin_release() -> None:
         print("Cleaning previous releases directory contents...")
         try:
             shutil.rmtree(releases_dir)
-        except Exception as e:
-            print(f"Error: Could not clear previous releases folder: {e}", file=sys.stderr)
+        except OSError as e:
+            print(f"Error: Could not clear previous releases folder: {e}. Check the folder is not open in Explorer or locked by another program.", file=sys.stderr)  # noqa: E501
             sys.exit(1)
 
     releases_dir.mkdir(parents=True, exist_ok=True)
@@ -37,7 +47,7 @@ def package_plugin_release() -> None:
         print("Copying compiled bin/ directory...")
         shutil.copytree(root_bin_dir, plugin_target_dir / "bin")
     else:
-        print("Warning: Root bin/ directory not found! Make sure you compile the plugin before packaging.", file=sys.stderr)
+        print("Warning: Root bin/ directory not found! Make sure you compile the plugin before packaging.", file=sys.stderr)  # noqa: E501
 
     # Copy icons/ folder into plugin directory (if it exists)
     if ICONS_SOURCE_DIR.exists() and ICONS_SOURCE_DIR.is_dir():
@@ -118,4 +128,4 @@ if __name__ == "__main__":
         sys.exit(0)
 
     package_plugin_release()
-    input("\nPress Enter to continue...")
+    _ = input("\nPress Enter to continue...")

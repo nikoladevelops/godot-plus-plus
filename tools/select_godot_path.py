@@ -1,13 +1,23 @@
+from __future__ import annotations
+
+import sys
+from pathlib import Path
+
+# Bootstrap so absolute imports work whether run as `python tools/foo.py` or `python -m tools.foo`
+if str(Path(__file__).resolve().parent.parent) not in sys.path:
+    sys.path.insert(0, str(Path(__file__).resolve().parent.parent))
+if str(Path(__file__).resolve().parent) not in sys.path:
+    sys.path.insert(0, str(Path(__file__).resolve().parent))
+
 import os
 import platform
 import re
 import shutil
 import subprocess
-import sys
-from pathlib import Path
 
-from config_manager import config
-from scons_helpers import clear_screen
+from tools.config_manager import config
+from tools.paths import normalize_user_path
+from tools.scons_helpers import clear_screen
 
 GODOT_PATTERN = re.compile(r"Godot|godot", re.IGNORECASE)
 
@@ -29,22 +39,13 @@ def display_info() -> None:
 
 
 def normalize_path(user_input: str) -> Path | None:
-    """
-    Sanitizes raw path input across Linux, macOS, and Windows.
-    Strips quotes, escaped terminal spaces, expands user tildes (~), and resolves symlinks.
-    """
+    """Backward-compat wrapper — delegates to paths.normalize_user_path (single source of truth)."""
+    # Keep detailed error logging here for UX, while core sanitization lives in paths.normalize_user_path
     cleaned = user_input.strip().strip('"').strip("'")
-    if not cleaned:
-        return None
-
-    if platform.system() != "Windows":
-        cleaned = cleaned.replace("\\ ", " ")
-
-    try:
-        return Path(cleaned).expanduser().resolve()
-    except (OSError, ValueError, RuntimeError) as e:
-        print(f"Error resolving path '{cleaned}': {e}")
-        return None
+    result = normalize_user_path(user_input)
+    if result is None and cleaned:
+        print(f"Error resolving path '{cleaned}'")
+    return result
 
 
 def handle_macos_app_bundle(path: Path) -> Path:
@@ -84,13 +85,13 @@ def validate_godot_binary(exe_path: Path) -> str | None:
         return None
 
     try:
+        # Use shell=False always — list form handles spaces cross-platform; shell=True with list is incorrect on Windows
         result = subprocess.run(
             [str(exe_path), "--version"],
             capture_output=True,
             text=True,
             timeout=5,
             check=True,
-            shell=platform.system() == "Windows",
         )
         output = result.stdout.strip()
         if output:
@@ -150,7 +151,7 @@ def auto_detect_godot_paths() -> list[tuple[Path, str]]:
     found_entries = []
     seen_paths = set()
 
-    def add_if_godot(file_path: Path):
+    def add_if_godot(file_path: Path) -> None:
         try:
             resolved = file_path.resolve()
             if resolved.exists() and str(resolved) not in seen_paths:
@@ -250,7 +251,7 @@ def add_custom_path_prompt() -> None:
     path = normalize_path(user_input)
     if not path or not path.exists():
         print("\nError: Provided path does not exist on disk!")
-        input("Press Enter to continue...")
+        _ = input("Press Enter to continue...")
         return
 
     resolved_path = handle_macos_app_bundle(path)
@@ -261,7 +262,7 @@ def add_custom_path_prompt() -> None:
             resolved_path = exe
         else:
             print("\nError: No Godot executable found inside that directory.")
-            input("Press Enter to continue...")
+            _ = input("Press Enter to continue...")
             return
 
     version_str = validate_godot_binary(resolved_path) or "Unknown Version"
@@ -285,7 +286,7 @@ def add_custom_path_prompt() -> None:
     else:
         print(f"\nSuccessfully added path to saved list: {path_str}")
 
-    input("Press Enter to continue...")
+    _ = input("Press Enter to continue...")
 
 
 def run_auto_detection() -> None:
@@ -308,14 +309,14 @@ def run_auto_detection() -> None:
 
         print("\nDiscovered paths saved to configuration.")
 
-    input("Press Enter to continue...")
+    _ = input("Press Enter to continue...")
 
 
 def switch_path_prompt() -> None:
     saved_entries = config.getSavedGodotPaths()
     if not saved_entries:
         print("\nNo saved paths available to switch to.")
-        input("Press Enter to continue...")
+        _ = input("Press Enter to continue...")
         return
 
     print("\nSelect path number to activate:")
@@ -329,14 +330,14 @@ def switch_path_prompt() -> None:
         selected_path = saved_entries[int(choice) - 1]["path"]
         config.setGodotActivePath(selected_path)
         print(f"\nActive Godot path set to: {selected_path}")
-        input("Press Enter to continue...")
+        _ = input("Press Enter to continue...")
 
 
 def remove_path_prompt() -> None:
     saved_entries = config.getSavedGodotPaths()
     if not saved_entries:
         print("\nNo saved paths to remove.")
-        input("Press Enter to continue...")
+        _ = input("Press Enter to continue...")
         return
 
     print("\nSelect path number to REMOVE from saved collection:")
@@ -349,7 +350,7 @@ def remove_path_prompt() -> None:
         target_remove = saved_entries[int(choice) - 1]["path"]
         config.removeSavedGodotPath(target_remove)
         print(f"\nRemoved path from collection: {target_remove}")
-        input("Press Enter to continue...")
+        _ = input("Press Enter to continue...")
 
 
 def select_godot_path() -> None:
@@ -401,7 +402,7 @@ def select_godot_path() -> None:
             selected_path = saved_entries[int(choice) - 1]["path"]
             config.setGodotActivePath(selected_path)
             print(f"\nActive Godot path set to: {selected_path}")
-            input("Press Enter to continue...")
+            _ = input("Press Enter to continue...")
 
 
 if __name__ == "__main__":

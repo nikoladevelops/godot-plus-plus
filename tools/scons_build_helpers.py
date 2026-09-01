@@ -1,7 +1,18 @@
-import os
+from __future__ import annotations
+
+import sys
 from pathlib import Path
 
-from paths import get_plugin_dir
+# Bootstrap so absolute imports work whether run as `python tools/foo.py` or `python -m tools.foo`
+if str(Path(__file__).resolve().parent.parent) not in sys.path:
+    sys.path.insert(0, str(Path(__file__).resolve().parent.parent))
+if str(Path(__file__).resolve().parent) not in sys.path:
+    sys.path.insert(0, str(Path(__file__).resolve().parent))
+
+import os
+from typing import Any
+
+from tools.paths import get_plugin_dir
 
 from tools.config_manager import config
 from tools.git_helpers import (
@@ -29,7 +40,7 @@ def verify_godot_cpp_submodule() -> None:
         initialize_current_submodule_version()
 
 
-def setup_build_environment(env, opts) -> None:
+def setup_build_environment(env: Any, opts: Any) -> None:
     """Configures build profiles and updates environment options."""
     selected_profile = config.getSelectedBuildProfile()
     if selected_profile != "none":
@@ -41,7 +52,7 @@ def setup_build_environment(env, opts) -> None:
     opts.Update(env)
 
 
-def get_library_filename(env, libname: str, precision: str) -> str:
+def get_library_filename(env: Any, libname: str, precision: str) -> str:
     """Computes standard library suffix and filename conventions based on platform/target."""
     arch_suffix = f".{env['arch']}" if env.get('arch') and env['arch'] != 'universal' else ''
     threads_val = str(env.get('threads', 'no')).strip().lower()
@@ -51,7 +62,7 @@ def get_library_filename(env, libname: str, precision: str) -> str:
     return f"{env.subst('$SHLIBPREFIX')}{libname}{suffix}{env.subst('$SHLIBSUFFIX')}"
 
 
-def get_target_install_dir(env) -> Path:
+def get_target_install_dir(env: Any) -> Path:
     """Resolves and ensures the active target project's installation directory exists."""
     install_dir = get_plugin_dir() / "bin" / env['platform']
     os.makedirs(str(install_dir), exist_ok=True)

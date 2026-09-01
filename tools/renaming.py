@@ -1,14 +1,25 @@
+from __future__ import annotations
+
+import sys
+from pathlib import Path
+
+# Bootstrap so absolute imports work whether run as `python tools/foo.py` or `python -m tools.foo`
+if str(Path(__file__).resolve().parent.parent) not in sys.path:
+    sys.path.insert(0, str(Path(__file__).resolve().parent.parent))
+if str(Path(__file__).resolve().parent) not in sys.path:
+    sys.path.insert(0, str(Path(__file__).resolve().parent))
+
 import os
 import re
+from collections.abc import Sequence
 import shutil
-import sys
 
-from config_manager import config
-from gdextension_file_helper import (
+from tools.config_manager import config
+from tools.gdextension_file_helper import (
     purge_old_project_gdextension,
     sync_gdextension_to_target_project,
 )
-from paths import PROJECT_ROOT, SRC_DIR, get_godot_project_dir
+from tools.paths import PROJECT_ROOT, SRC_DIR, get_godot_project_dir
 
 # Global state for rollback tracking
 renamed_paths = []  # tuples of (new_path, old_path)
@@ -32,7 +43,7 @@ def sanitize_and_validate_filename(name: str) -> str | None:
     return cleaned.lower()
 
 
-def verify_paths_exist(paths):
+def verify_paths_exist(paths: list[str]) -> None:
     missing = [p for p in paths if not os.path.exists(p)]
     if missing:
         for path in missing:
@@ -40,43 +51,60 @@ def verify_paths_exist(paths):
         sys.exit(1)
 
 
-def backup_file(path):
+def backup_file(path: str) -> None:
     with open(path, "r", encoding="utf-8") as f:
         file_backups[path] = f.read()
 
 
-def restore_file_contents():
+def restore_file_contents() -> None:
     for path, content in file_backups.items():
         try:
             with open(path, "w", encoding="utf-8") as f:
                 f.write(content)
-        except Exception as e:
-            print(f"Warning: Could not restore file {path}: {e}", file=sys.stderr)
+        except OSError as e:
+            print(f"Warning: Could not restore file {path}: {e}. Check file permissions.", file=sys.stderr)
 
 
-def rename_path(old_path, new_path):
-    os.rename(old_path, new_path)
+def rename_path(old_path: str, new_path: str) -> None:
+    # Use shutil.move for cross-device support; fallback to os.rename otherwise. Track for rollback.
+    try:
+        # Prevent stray backslashes creating weird file at project root (the \home\ bug)
+        if "\\" in old_path or "\\" in new_path:
+            # On POSIX backslash is a valid filename char — explicitly reject Windows-style paths here
+            print(f"Warning: refusing rename with backslashes: {old_path!r} -> {new_path!r}", file=sys.stderr)
+            raise OSError(f"Backslash in path: {old_path!r} -> {new_path!r}")
+        os.rename(old_path, new_path)
+    except OSError as e:
+        # EXDEV cross-device link error → fallback to shutil.move
+        if getattr(e, "errno", None) == 18:  # EXDEV
+            shutil.move(old_path, new_path)
+        else:
+            raise
     renamed_paths.append((new_path, old_path))
 
 
-def rollback_renames():
+def rollback_renames() -> None:
     for new_path, old_path in reversed(renamed_paths):
         try:
             os.rename(new_path, old_path)
-        except Exception as e:
-            print(f"Warning: Could not rollback rename {new_path} -> {old_path}: {e}", file=sys.stderr)
+        except OSError as e:
+            print(  # noqa: E501
+                f"Warning: Could not rollback rename {new_path} -> {old_path}: {e}. "
+                "Check file permissions.",
+                file=sys.stderr,
+            )
 
 
-def delete_bin_folders(paths):
+def delete_bin_folders(paths: list[str]) -> None:
     for path in paths:
-        if os.path.isdir(path):
+        if path and os.path.isdir(path):
             try:
                 shutil.rmtree(path)
-            except Exception as e:
-                print(f"Warning: Could not delete folder {path}: {e}", file=sys.stderr)
+            except OSError as e:
+                print(f"Warning: Could not delete folder {path}: {e}. Check file permissions.", file=sys.stderr)
 
 
-def edit_file_with_subs(path, subs):
+def edit_file_with_subs(path: str, subs: Sequence[tuple[str, str, int]]) -> None:
     backup_file(path)
     with open(path, "r", encoding="utf-8") as f:
         content = f.read()
@@ -86,7 +114,7 @@ def edit_file_with_subs(path, subs):
         f.write(content)
 
 
-def edit_register_types(path, new_name):
+def edit_register_types(path: str, new_name: str) -> None:
     subs = [
         (
             r'(GDExtensionBool GDE_EXPORT )\w+(_init\s*\()',
@@ -97,8 +125,8 @@ def edit_register_types(path, new_name):
     edit_file_with_subs(path, subs)
 
 
-def edit_gdextension_contents(path, old_name, new_name):
-    """Safely updates entry symbols and internal library/dependency path references inside the root .gdextension file."""
+def edit_gdextension_contents(path: str, old_name: str, new_name: str) -> None:
+    """Updates entry symbols and library path references."""
     backup_file(path)
     with open(path, "r", encoding="utf-8") as f:
         content = f.read()
@@ -136,7 +164,7 @@ def edit_gdextension_contents(path, old_name, new_name):
         f.writelines(updated_lines)
 
 
-def update_plugin_name(new_name):
+def update_plugin_name(new_name: str) -> None:
     old_name = config.getPluginName().lower()
     new_name_lower = new_name.lower()
 
@@ -188,10 +216,20 @@ def update_plugin_name(new_name):
         print("\nPlugin renamed successfully via config.json!")
         print("Root .gdextension contents updated, stale test project manifests purged, and clean template resynced.")
         print("Please recompile the plugin to generate fresh binaries.\n")
-        input("Press any key to continue...")
+        _ = input("Press any key to continue...")
+        # Clear global state on success so subsequent runs in same process don't carry stale backups
+        renamed_paths.clear()
+        file_backups.clear()
 
-    except Exception as e:
-        print(f"Error: {e}", file=sys.stderr)
+    except OSError as e:
+        print(f"Error: File operation failed: {e}. Check permissions and that the project is closed.", file=sys.stderr)
+        print("Rolling back changes...", file=sys.stderr)
+        restore_file_contents()
+        rollback_renames()
+        print("Rollback complete.", file=sys.stderr)
+        sys.exit(1)
+    except Exception as e:  # noqa: BLE001 - rename involves multiple steps, any failure should trigger rollback
+        print(f"Error: Unexpected failure: {e}", file=sys.stderr)
         print("Rolling back changes...", file=sys.stderr)
         restore_file_contents()
         rollback_renames()

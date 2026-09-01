@@ -1,10 +1,19 @@
-import subprocess
+from __future__ import annotations
+
 import sys
 from pathlib import Path
 
-from config_manager import config
-from paths import DOCS_SOURCE_DIR, PROJECT_ROOT, get_godot_project_dir
-from scons_helpers import clear_screen
+# Bootstrap so absolute imports work whether run as `python tools/foo.py` or `python -m tools.foo`
+if str(Path(__file__).resolve().parent.parent) not in sys.path:
+    sys.path.insert(0, str(Path(__file__).resolve().parent.parent))
+if str(Path(__file__).resolve().parent) not in sys.path:
+    sys.path.insert(0, str(Path(__file__).resolve().parent))
+
+import subprocess
+
+from tools.config_manager import config
+from tools.paths import DOCS_SOURCE_DIR, PROJECT_ROOT, get_godot_project_dir
+from tools.scons_helpers import clear_screen
 
 TOOL_HEADER = "Tool For Generating XML Editor Documentation By @realNikich"
 GODOT_DOCS_URL = "https://docs.godotengine.org/en/stable/tutorials/scripting/cpp/gdextension_docs_system.html"
@@ -112,7 +121,10 @@ def generate_docs(godot_exec: str, project_dir: Path) -> bool:
     except FileNotFoundError:
         print(f"\nERROR: The executable '{godot_exec}' was not found. Please check your active path.")
         return False
-    except Exception as e:
+    except OSError as e:
+        print(f"\nFile system error while running Godot: {e}\n")
+        return False
+    except Exception as e:  # noqa: BLE001 - Godot execution can fail in many ways, user is informed
         print(f"\nAn unexpected error occurred while running the executable: {e}\n")
         return False
 
@@ -129,7 +141,7 @@ def main() -> None:
         print("\n[!] ERROR: No active Godot Engine executable path found in configuration.")
         print("Please run option ('Select Godot Engine Executable Path') from the main setup menu first")
         print("to configure and select a valid Godot executable before generating documentation.")
-        input("\nPress Enter to exit...")
+        _ = input("\nPress Enter to exit...")
         return
 
     display_warning()
@@ -142,7 +154,7 @@ def main() -> None:
     else:
         print("\nDocumentation generation process failed.")
 
-    input("\nPress Enter to exit...")
+    _ = input("\nPress Enter to exit...")
 
 
 if __name__ == "__main__":
