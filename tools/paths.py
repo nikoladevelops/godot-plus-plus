@@ -50,10 +50,43 @@ def normalize_user_path(user_input: str) -> Path | None:
     if _platform.system() != "Windows":
         cleaned = cleaned.replace("\\ ", " ")
 
+    # Windows drives like E:\ look like a filename on Linux, so handle them
+    # separately and keep the original form instead of mangling it.
+    if _is_absolute_cross_platform(cleaned):
+        from pathlib import PureWindowsPath
+
+        if PureWindowsPath(cleaned).is_absolute():
+            try:
+                if _platform.system() == "Windows":
+                    return Path(cleaned).expanduser().resolve(strict=False)
+                return Path(cleaned).expanduser()
+            except (OSError, ValueError, RuntimeError):
+                return Path(cleaned).expanduser()
+
     try:
-        return Path(cleaned).expanduser().resolve()
+        # strict=False lets missing drives like U:\ not raise an error
+        return Path(cleaned).expanduser().resolve(strict=False)
     except (OSError, ValueError, RuntimeError):
-        return None
+        # Very odd paths like \\?\ can still fail, try without resolving
+        try:
+            return Path(cleaned).expanduser()
+        except (OSError, ValueError, RuntimeError):
+            return None
+
+
+def _is_absolute_cross_platform(path_str: str) -> bool:
+    """Check if a path is absolute on any OS, including Windows drives on Linux."""
+    import os as _os
+    import re as _re
+
+    from pathlib import PureWindowsPath
+
+    return (
+        _os.path.isabs(path_str)
+        or PureWindowsPath(path_str).is_absolute()
+        or bool(_re.match(r"^[a-zA-Z]:[\\/]", path_str))
+        or path_str.startswith("\\\\")
+    )
 
 
 def get_godot_project_dir() -> Path:
@@ -68,19 +101,33 @@ def get_godot_project_dir() -> Path:
     if not project_str:
         return PROJECT_ROOT / "test_project"
 
-    path_obj = Path(project_str)
-    if path_obj.is_absolute():
-        return path_obj.resolve()
+    if _is_absolute_cross_platform(project_str):
+        from pathlib import PureWindowsPath
 
-    # Relative path: always resolve against PROJECT_ROOT, not current working directory
-    workspace_resolved = (PROJECT_ROOT / path_obj).resolve()
+        # Don't let a Windows path like E:\ get mangled when this runs on Linux
+        if PureWindowsPath(project_str).is_absolute() and _platform.system() != "Windows":
+            try:
+                return Path(project_str).expanduser()
+            except (OSError, ValueError, RuntimeError):
+                return Path(project_str)
 
-    # If that location exists, use it (standard case: test_project inside workspace)
-    if workspace_resolved.exists():
-        return workspace_resolved
+        try:
+            return Path(project_str).expanduser().resolve(strict=False)
+        except (OSError, ValueError, RuntimeError):
+            return Path(project_str).expanduser()
 
-    # Fallback: return the resolved workspace path even if it does not exist yet
-    # so validation can correctly report missing project.godot
+    # Relative paths are always based on the template folder, not where you ran python from
+    try:
+        workspace_resolved = (PROJECT_ROOT / Path(project_str)).resolve(strict=False)
+    except (OSError, ValueError, RuntimeError):
+        workspace_resolved = PROJECT_ROOT / Path(project_str)
+
+    try:
+        if workspace_resolved.exists():
+            return workspace_resolved
+    except OSError:
+        pass
+
     return workspace_resolved
 
 
@@ -108,9 +155,18 @@ def get_selected_extension_api_path() -> Path:
 
     rel_path_str = config.getExtensionApiPath()
     if rel_path_str:
-        rel_path = Path(rel_path_str)
-        if rel_path.is_absolute():
-            return rel_path
-        return PROJECT_ROOT / rel_path
+        if _is_absolute_cross_platform(rel_path_str):
+            from pathlib import PureWindowsPath
+
+            if PureWindowsPath(rel_path_str).is_absolute() and _platform.system() != "Windows":
+                try:
+                    return Path(rel_path_str).expanduser()
+                except (OSError, ValueError, RuntimeError):
+                    return Path(rel_path_str)
+            try:
+                return Path(rel_path_str).expanduser().resolve(strict=False)
+            except (OSError, ValueError, RuntimeError):
+                return Path(rel_path_str).expanduser()
+        return PROJECT_ROOT / Path(rel_path_str)
 
     return GDEXTENSION_APIS_PATH / "extension_api.json"

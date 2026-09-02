@@ -24,12 +24,17 @@ from tools.paths import BUILD_PROFILES_DIR
 
 def find_sources(dirs: list[str], exts: list[str]) -> list[str]:
     """Recursively searches the specified directories for source files."""
-    sources = []
+    sources: list[str] = []
     for d in dirs:
-        for root, _, files in os.walk(d):
+        dir_path = Path(d)
+        # Keep os.walk for now - it handles symlink loops correctly on Windows
+        if not dir_path.exists():
+            continue
+        for root, _, files in os.walk(dir_path, followlinks=False):
+            root_path = Path(root)
             for file in files:
                 if any(file.endswith(ext) for ext in exts):
-                    sources.append(os.path.join(root, file))
+                    sources.append(str(root_path / file))
     return sources
 
 
@@ -64,6 +69,9 @@ def get_library_filename(env: Any, libname: str, precision: str) -> str:
 
 def get_target_install_dir(env: Any) -> Path:
     """Resolves and ensures the active target project's installation directory exists."""
-    install_dir = get_plugin_dir() / "bin" / env['platform']
-    os.makedirs(str(install_dir), exist_ok=True)
+    install_dir = get_plugin_dir() / "bin" / str(env["platform"])
+    try:
+        install_dir.mkdir(parents=True, exist_ok=True)
+    except OSError as e:
+        print(f"Warning: could not create install dir {install_dir}: {e}", file=sys.stderr)
     return install_dir

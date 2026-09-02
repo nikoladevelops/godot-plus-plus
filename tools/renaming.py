@@ -44,10 +44,43 @@ def sanitize_and_validate_filename(name: str) -> str | None:
 
 
 def verify_paths_exist(paths: list[str]) -> None:
-    missing = [p for p in paths if not os.path.exists(p)]
+    missing: list[str] = []
+    for p in paths:
+        try:
+            # Use Path for cross-platform handling of Windows drives and UNC on any host
+            # Also handle paths with mixed slashes and drive letters
+            if not Path(p).exists():
+                # Fallback to os.path.exists for \\?\ long paths on Windows
+                if not os.path.exists(p):
+                    missing.append(p)
+        except (OSError, ValueError, RuntimeError):
+            missing.append(p)
+
     if missing:
+        print("Error: Required path(s) do not exist. This often happens on Windows when", file=sys.stderr)
+        print("the project is on a different drive or the path was pasted with quotes.", file=sys.stderr)
         for path in missing:
-            print(f"Error: Required path does not exist: {path}", file=sys.stderr)
+            try:
+                exists_via_path = Path(path).exists()
+                exists_via_os = os.path.exists(path)
+            except (OSError, ValueError, RuntimeError):  # noqa: BLE001 - existence check must never crash
+                exists_via_path = False
+                exists_via_os = False
+            print(  # noqa: E501
+                f"  - Missing: {path!r} (Path.exists={exists_via_path}, os.path.exists={exists_via_os})",
+                file=sys.stderr,
+            )
+            # Hint for Windows backslashes vs POSIX
+            if "\\" in path and os.name != "nt":
+                print(  # noqa: E501
+                    "    Hint: Path contains backslashes but you are on POSIX. On Windows this is normal.",
+                    file=sys.stderr,
+                )
+        print(f"Current PROJECT_ROOT: {PROJECT_ROOT}", file=sys.stderr)
+        print(  # noqa: E501
+            f"Current get_godot_project_dir(): {get_godot_project_dir()} (exists={get_godot_project_dir().exists()})",
+            file=sys.stderr,
+        )
         sys.exit(1)
 
 
@@ -66,17 +99,17 @@ def restore_file_contents() -> None:
 
 
 def rename_path(old_path: str, new_path: str) -> None:
-    # Use shutil.move for cross-device support; fallback to os.rename otherwise. Track for rollback.
+    # Use shutil.move for cross-device and cross-drive support on Windows (C: -> E:)
+    # and fallback to os.rename for same-device atomic rename.
     try:
-        # Prevent stray backslashes creating weird file at project root (the \home\ bug)
-        if "\\" in old_path or "\\" in new_path:
-            # On POSIX backslash is a valid filename char — explicitly reject Windows-style paths here
-            print(f"Warning: refusing rename with backslashes: {old_path!r} -> {new_path!r}", file=sys.stderr)
-            raise OSError(f"Backslash in path: {old_path!r} -> {new_path!r}")
         os.rename(old_path, new_path)
     except OSError as e:
-        # EXDEV cross-device link error → fallback to shutil.move
-        if getattr(e, "errno", None) == 18:  # EXDEV
+        # EXDEV cross-device/drive link error -> fallback to copy+delete via shutil.move
+        # Windows cross-drive also raises EXDEV or generic OSError with winerror 17/183
+        if getattr(e, "errno", None) == 18 or "EXDEV" in str(e) or "Invalid cross-device" in str(e):
+            shutil.move(old_path, new_path)
+        elif os.name == "nt" and getattr(e, "winerror", None) in (17, 183, 115, 206):
+            # Windows specific: 17=ERROR_NOT_SAME_DEVICE, 183=already exists, 115, 206
             shutil.move(old_path, new_path)
         else:
             raise
@@ -97,11 +130,14 @@ def rollback_renames() -> None:
 
 def delete_bin_folders(paths: list[str]) -> None:
     for path in paths:
-        if path and os.path.isdir(path):
-            try:
+        if not path:
+            continue
+        try:
+            # Use Path for cross-drive and UNC handling on Windows, plus long path \\?\
+            if Path(path).is_dir():
                 shutil.rmtree(path)
-            except OSError as e:
-                print(f"Warning: Could not delete folder {path}: {e}. Check file permissions.", file=sys.stderr)
+        except OSError as e:
+            print(f"Warning: Could not delete folder {path}: {e}. Check file permissions.", file=sys.stderr)
 
 
 def edit_file_with_subs(path: str, subs: Sequence[tuple[str, str, int]]) -> None:
@@ -200,10 +236,13 @@ def update_plugin_name(new_name: str) -> None:
         rename_path(str(root_old_gdextension), str(root_new_gdextension))
 
         # Clean compiled binaries directories
-        delete_bin_folders([
-            str(PROJECT_ROOT / "bin"),
-            str(new_plugin_dir / "bin") if new_plugin_dir.exists() else ""
-        ])
+        bin_paths: list[str] = [str(PROJECT_ROOT / "bin")]
+        try:
+            if new_plugin_dir.exists():
+                bin_paths.append(str(new_plugin_dir / "bin"))
+        except OSError:
+            pass
+        delete_bin_folders(bin_paths)
 
         # Update C++ source entry points, root gdextension contents, and configuration state
         edit_register_types(str(register_types_path), new_name_lower)

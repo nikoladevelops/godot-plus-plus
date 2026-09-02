@@ -15,19 +15,24 @@ from tools.paths import PROJECT_ROOT, SUBMODULE_PATH
 
 
 def run_git_command(args: list[str], cwd: Path | str | None = None) -> tuple[bool, str]:
-    """Run a Git command and return (success, output)."""
+    """Run a Git command and return (success, output). Never raises."""
     # Convert Path objects to string if passed to cwd
     if cwd:
         cwd = str(cwd)
 
-    result = subprocess.run(
-        ["git"] + args,
-        cwd=cwd,
-        text=True,
-        capture_output=True,
-        check=False
-    )
-    return result.returncode == 0, result.stdout.strip() or result.stderr.strip()
+    try:
+        result = subprocess.run(
+            ["git"] + args,
+            cwd=cwd,
+            text=True,
+            capture_output=True,
+            check=False
+        )
+        return result.returncode == 0, result.stdout.strip() or result.stderr.strip()
+    except FileNotFoundError as e:
+        return False, f"Failed to run git: {e}. Check that Git is installed and the path '{cwd}' exists."
+    except OSError as e:
+        return False, f"Failed to run git in '{cwd}': {e}"
 
 
 def check_godot_cpp_submodule_initialized() -> bool:

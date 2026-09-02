@@ -20,20 +20,18 @@ BuildTarget = Literal["template_debug", "template_release"]
 
 
 def _resolve_scons_command() -> list[str]:
-    """Resolve scons command cross-platform. Prefers PATH, falls back to python -m scons."""
+    """Find the scons binary, or fall back to python -m scons if it's not on PATH."""
     scons_exe = shutil.which("scons")
     if scons_exe:
-        # On Windows, pip installs scons.bat which requires shell=True to execute.
-        # Using python -m scons is more robust cross-platform, especially for .bat.
+        # Windows pip creates scons.bat which needs a shell, so use -m instead
         if scons_exe.lower().endswith(".bat"):
             return [sys.executable, "-m", "scons"]
         return [scons_exe]
-    # Fallback: python -m scons is guaranteed to work if scons is pip-installed
     return [sys.executable, "-m", "scons"]
 
 
 def pause(msg: str = "Press Enter to continue...") -> None:
-    """Wait for user input. Silently handles non interactive pipes and Ctrl C."""
+    """Pause until the user hits Enter. Handles pipes and Ctrl+C quietly."""
     try:
         _ = input(msg)
     except (EOFError, KeyboardInterrupt):
@@ -41,37 +39,29 @@ def pause(msg: str = "Press Enter to continue...") -> None:
 
 
 def clear_screen() -> None:
-    """Clear the terminal screen cross-platform. Never raises."""
+    """Clear the screen. Does nothing if it fails, so the menu never crashes."""
     try:
         if os.name == "nt":
-            # 'cls' is a cmd.exe builtin; must be invoked via shell.
-            # On real Windows, delegate to cmd.exe; on mocked non-Windows (tests), silently no-op.
             import platform as _platform
 
+            # Tests sometimes fake os.name on Linux, skip the actual cls call there
             if _platform.system() != "Windows":
-                # Mocked Windows on POSIX (e.g., CI test) – avoid 'cls: not found' noise
                 return
             _ = subprocess.run("cls", shell=True, check=False)  # noqa: S602
         else:
-            # POSIX: use 'clear' if available, otherwise ANSI escape
             if shutil.which("clear"):
                 _ = subprocess.run(["clear"], check=False)
             else:
+                # No clear command, use ANSI sequence
                 _ = sys.stdout.write("\033[2J\033[H")
                 _ = sys.stdout.flush()
     except (OSError, RuntimeError, subprocess.SubprocessError) as exc:
-        # Clear screen must never crash the menu. Any error is intentionally ignored.
-        # Narrowed from blind Exception per best practice. Log for debugging if needed.
         _ = exc
         pass
 
 
 def _stream_popen(args: list[str], cwd: str) -> tuple[int, str, str]:
-    """
-    Run a subprocess with streaming stdout and capture stderr.
-    Prints stdout line by line as it arrives, then returns (returncode, stdout, stderr).
-    Used by both build and clean to avoid duplicated loops.
-    """
+    """Run a command, print its output live, and return the result."""
     process = subprocess.Popen(
         args,
         stdout=subprocess.PIPE,
@@ -101,7 +91,7 @@ def _stream_popen(args: list[str], cwd: str) -> tuple[int, str, str]:
 
 
 def run_tool_script(script_filename: str) -> None:
-    """Run a script from the tools folder and handle errors/output."""
+    """Run one of the tool scripts in tools/."""
     script_path = TOOLS_DIR / script_filename
     result = subprocess.run([sys.executable, str(script_path)], check=False)
 
@@ -111,10 +101,7 @@ def run_tool_script(script_filename: str) -> None:
 
 
 def run_scons_build(target: BuildTarget) -> None:
-    """
-    Executes SCons build targeting a specific build profile (template_debug or template_release)
-    and streams output in real-time.
-    """
+    """Build the GDExtension with SCons for the given target."""
     godot_version = config.getGodotVersion()
     debug_symbols = config.getDebugSymbols()
 
@@ -173,9 +160,7 @@ def run_scons_build(target: BuildTarget) -> None:
 
 
 def run_scons_clean() -> None:
-    """
-    Executes SCons clean command (scons -c) to remove build artifacts and streams output in real-time.
-    """
+    """Run scons -c to clean build files."""
 
     scons_args = _resolve_scons_command() + [
         "-c",
